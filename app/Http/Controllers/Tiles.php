@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Exceptions\RegionDataMissingException;
 use App\Helpers\Coordinates;
 use App\Helpers\Math;
+use App\Models\Chunk;
 use App\Models\Tile;
 use App\Models\Vector;
 use Illuminate\Routing\Controller;
+use Imagick;
 use ImagickPixel;
 
 class Tiles extends Controller
@@ -44,6 +46,7 @@ class Tiles extends Controller
         $chunksWithData = $chunks
             ->filter(fn($c) => $c->getDataLength());
 
+
         $latestModificationDate = $chunksWithData
             ->map(fn($c) => $c->getLastModified())
             ->max();
@@ -52,22 +55,23 @@ class Tiles extends Controller
 
         $tile = new Tile(<<<TXT
 {$region->fileName()}
-{$edge} chunk(s) per edge
-{$chunksWithData->count()} chunk(s) with data
+{$chunks->count()}/{$chunksWithData->count()} chunk(s) have data
 Offset: {$offsetInRegion->absX()}, {$offsetInRegion->absY()}
 Most recently modified at:
 {$date}
 TXT);
 
         foreach ($chunksWithData as $chunk) {
-            /** @var Chunk $c */
+            /** @var Chunk $chunk */
             $tile->draw(function($d) use ($chunk, $offsetInRegion, $edge) {
                 /** @var ImagickDraw $d */
 
                 $unit = Tile::WIDTH / $edge;
+                $height = $chunk->getHighestPopulatedSection();
 
-                $d->setStrokeColor(new ImagickPixel('#9ABCDE'));
-                $d->setFillColor(new ImagickPixel('#ABCDEF'));
+                $color = new ImagickPixel('#0000FF');
+                $color->setColorValue(Imagick::COLOR_ALPHA, Math::scale($height->y ?? Chunk::SECTION_WORLD_FLOOR, Chunk::SECTION_WORLD_FLOOR, Chunk::SECTION_WORLD_CEIL, 0, 1));
+                $d->setFillColor($color);
                 $d->rectangle(
                     ($chunk->x - $offsetInRegion->x) * $unit,
                     ($chunk->z - $offsetInRegion->y) * $unit,

@@ -8,19 +8,24 @@ use Aternos\Nbt\NbtFormat;
 use Aternos\Nbt\Tag\CompoundTag;
 use Aternos\Nbt\Tag\Tag;
 use Exception;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 class Chunk
 {
-    public $region;
-    public $x;
-    public $z;
+    const SECTION_WORLD_FLOOR = 0;
+    const SECTION_WORLD_CEIL = 15;
 
-    public function __construct(Region $region, int $x, int $z)
-    {
-        $this->region = $region;
-        $this->x = $x;
-        $this->z = $z;
-    }
+    private ZLibCompressedStringReader|null|false $data = null;
+    private ?Tag $nbt = null;
+    private ?Collection $sections = null;
+
+    public function __construct(
+        public Region $region,
+        public int $x,
+        public int $z,
+    )
+    {}
 
     public function getDataOffset(): int
     {
@@ -44,6 +49,8 @@ class Chunk
             $sectors = unpack('Nlen', $padded)['len'];
         } catch (Exception $e) {
             // Invalid table data? Probably no data:
+            Log::error("Failed to unpack data for Chunk [{$this->x}, {$this->z}]: {$e->getMessage()}");
+
             return 0;
         }
 
@@ -71,8 +78,12 @@ class Chunk
         return new DateTime("@{$timestamp}");
     }
 
-    public function getData(): ZLibCompressedStringReader
+    public function getData(): ZLibCompressedStringReader|null|false
     {
+        if ($this->data !== null) {
+            return $this->data;
+        }
+
         $offset = $this->getDataOffset();
         $length = $this->getDataLength();
 
@@ -82,15 +93,87 @@ class Chunk
         // Find length from header:
         $length = unpack('Nlen', substr($raw, 0, 4))['len'];
 
+        // Get the compression format:
+        $format = unpack('Nformat', "\x00\x00\x00" . substr($raw, 4, 1))['format'];
+
         // Carve out compressed NBT data (skipping the compression type at byte 4):
         $data = substr($raw, 5, $length);
 
-        return new ZLibCompressedStringReader($data, NbtFormat::JAVA_EDITION);
+        if (strlen($data) === 0) {
+            return $this->data = false;
+        }
+
+        try {
+            $decompressed = new ZLibCompressedStringReader($data, NbtFormat::JAVA_EDITION);
+        } catch (Exception $e) {
+            Log::error("Failed to decompress data for chunk [{$this->x}, {$this->z}]: {$e->getMessage()}");
+
+            return $this->data = false;
+        }
+
+        return $this->data = $decompressed;
     }
 
-    public function getNbtData(): CompoundTag
+    public function getNbtData(): ?CompoundTag
     {
-        return Tag::load($this->getData());
+        if ($this->nbt !== null) {
+            return $this->nbt;
+        }
+
+        $data = $this->getData();
+
+        if (empty($data)) {
+            return $this->nbt = null;
+        }
+
+        try {
+            $nbt = Tag::load($this->getData());
+        } catch (Exception $e) {
+            Log::error("Failed to load NBT data for Chunk [{$this->x}, {$this->z}]: {$e->getMessage()}");
+
+            return $this->nbt = null;
+        }
+
+        return $this->nbt = $nbt;
+    }
+
+    public function getSections(): Collection
+    {
+        if ($this->sections !== null) {
+            return $this->sections;
+        }
+
+        $data = $this->getNbtData();
+
+        if ($data === null) {
+            // Empty collection:
+            return Collection::make();
+        }
+
+        $sections = $data->get('sections');
+
+        return $this->sections = Collection::make($sections)
+            ->map(function($s) {
+                return new Section($s, $this);
+            });
+    }
+
+    public function getWorldSections(): Collection
+    {
+        return $this->getSections()
+            ->where(function($s) {
+                return $s->y >= self::SECTION_WORLD_FLOOR && $s->y <= self::SECTION_WORLD_CEIL;
+            });
+    }
+
+    public function getSection(int $y): CompoundTag
+    {
+        return $this->getSections()->get($y);
+    }
+
+    public function getBlock(int $x, int $z, int $y): Block
+    {
+        return new Block($x, $z, $y, $this);
     }
 
     public function getHighestBlockAt(int $x, int $z)
@@ -98,8 +181,13 @@ class Chunk
 
     }
 
-    public function getHighestSectorWithBlocks(): int
+    public function getHighestPopulatedSection(): ?Section
     {
-        
+        $sections = $this->getWorldSections();
+
+        $sections->reverse();
+        return $sections->reverse()->firstWhere(function($s) {
+            return !$s->isEmpty();
+        });
     }
 }

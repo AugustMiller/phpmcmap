@@ -2,6 +2,7 @@
 
 namespace App\Helpers;
 
+use App\Models\Chunk;
 use App\Models\Region;
 
 /**
@@ -9,7 +10,6 @@ use App\Models\Region;
  * 
  * @todo Stop returning models and deal only in coordinate pairs.
  * @todo Instantiate models from an abstract coordinate pair.
- * @todo Are “vectors” useful?
  */
 class Coordinates
 {
@@ -40,6 +40,19 @@ class Coordinates
         return new Region(
             $x >> 9, // ?
             $z >> 9, // ?
+        );
+    }
+
+    /**
+     * Returns which chunk a block belongs to.
+     */
+    public static function blockToChunk(int $x, int $z): Chunk
+    {
+        $region = static::blockToRegion($x, $z);
+
+        return $region->getChunk(
+            $x >> 4,
+            $z >> 4,
         );
     }
 

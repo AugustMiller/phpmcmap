@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Map;
+use App\Http\Controllers\Metadata;
 use App\Http\Controllers\Tiles;
 use Illuminate\Support\Facades\Route;
 
@@ -17,7 +18,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', Map::class);
 
-Route::get('/tile/{z}/{x}/{y}', [Tiles::class, 'render'])
+Route::get('/api/tile/{z}/{x}/{y}', [Tiles::class, 'render'])
     ->whereNumber('z')
     ->where(['x', 'y'], '-?[0-9]+')
     ->name('tile');
+
+
+Route::get('/api/blocks/{x}/{z}/{y}', [Metadata::class, 'blockInfo']);

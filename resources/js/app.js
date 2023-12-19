@@ -4,7 +4,7 @@ const map = L.map($container, {
 })
     .setView([0, 0], 0);
 
-L.tileLayer('/tile/{z}/{x}/{y}', {
+L.tileLayer('/api/tile/{z}/{x}/{y}', {
     minZoom: 0,
     maxZoom: 4,
     noWrap: true,
