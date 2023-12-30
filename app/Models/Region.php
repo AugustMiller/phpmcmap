@@ -4,8 +4,6 @@ namespace App\Models;
 
 use App\Exceptions\RegionDataMissingException;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
-use Symfony\Component\String\ByteString;
 
 class Region
 {

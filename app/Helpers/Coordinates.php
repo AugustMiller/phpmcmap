@@ -56,6 +56,11 @@ class Coordinates
         );
     }
 
+    public static function heightToSection(int $y): int
+    {
+        return floor($y / Chunk::BLOCK_DIMENSIONS);
+    }
+
     public static function localChunkOffset(int $global): int
     {
         return $global - Region::CHUNK_DIMENSIONS * ($global >> 5);

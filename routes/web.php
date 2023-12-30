@@ -18,9 +18,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', Map::class);
 
-Route::get('/api/tile/{z}/{x}/{y}', [Tiles::class, 'render'])
-    ->whereNumber('z')
-    ->where(['x', 'y'], '-?[0-9]+')
+Route::get('/api/tiles/{zoom}/{x}/{z}', [Tiles::class, 'render'])
+    ->whereNumber('zoom')
+    // Unfortunately, not just `whereNumber` because we need to support negative coordinates!
+    ->where(['x', 'z'], '-?[0-9]+')
     ->name('tile');
 
 

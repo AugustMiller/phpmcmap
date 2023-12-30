@@ -48,6 +48,13 @@ class Tile
 
     public function draw(callable $fn): void
     {
-        $this->image->drawImage($fn(new ImagickDraw()));
+        $art = $fn(new ImagickDraw());
+
+        // Let $fn return nothing:
+        if (!$art) {
+            return;
+        }
+
+        $this->image->drawImage($art);
     }
 }

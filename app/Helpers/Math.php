@@ -19,4 +19,13 @@ class Math
     {
         return ($num - $inMin) * ($outMax - $outMin) / ($inMax - $inMin) + $outMin;
     }
+
+    /**
+     * Takes a range of bits from an incoming integer.
+     */
+    public static function sliceLong(int $long, int $start, int $length): int
+    {
+        // Shift down to the starting bit, then AND with as many 1s as represent the length:
+        return ($long >> $start) & (pow(2, $length) - 1);
+    }
 }

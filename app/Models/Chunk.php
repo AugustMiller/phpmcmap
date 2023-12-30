@@ -2,19 +2,38 @@
 
 namespace App\Models;
 
+use App\Helpers\Math;
 use DateTime;
 use Aternos\Nbt\IO\Reader\ZLibCompressedStringReader;
 use Aternos\Nbt\NbtFormat;
 use Aternos\Nbt\Tag\CompoundTag;
+use Aternos\Nbt\Tag\LongArrayTag;
 use Aternos\Nbt\Tag\Tag;
 use Exception;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Model representing a single chunk in the world.
+ * 
+ * @property int $x The region-relative X coordinate (East/West) of the chunk.
+ * @property int $z The region-relative Z coordinate (North/South) of the chunk.
+ */
 class Chunk
 {
     const SECTION_WORLD_FLOOR = 0;
     const SECTION_WORLD_CEIL = 15;
+    const BLOCK_DIMENSIONS = 16;
+
+    const NBT_KEY_HEIGHTMAP = 'Heightmaps';
+
+    const NBT_TAG_HEIGHTMAP_MOTION_BLOCKING = 'MOTION_BLOCKING';
+    const NBT_TAG_HEIGHTMAP_MOTION_BLOCKING_NO_LEAVES = 'MOTION_BLOCKING_NO_LEAVES';
+    const NBT_TAG_HEIGHTMAP_OCEAN_FLOOR = 'OCEAN_FLOOR';
+    const NBT_TAG_HEIGHTMAP_OCEAN_FLOOR_WG = 'OCEAN_FLOOR_WG';
+    const NBT_TAG_HEIGHTMAP_WORLD_SURFACE = 'WORLD_SURFACE';
+    const NBT_TAG_HEIGHTMAP_WORLD_SURFACE_WG = 'WORLD_SURFACE_WG';
 
     private ZLibCompressedStringReader|null|false $data = null;
     private ?Tag $nbt = null;
@@ -25,7 +44,26 @@ class Chunk
         public int $x,
         public int $z,
     )
-    {}
+    {
+
+    }
+
+    /**
+     * Returns the offset for the chunk's data location in the header table.
+     */
+    public function getLocationOffset(): int
+    {
+        return Region::LOOKUP_CELL_LENGTH * (Math::modPositive($this->x, Region::CHUNK_DIMENSIONS) + Math::modPositive($this->z, Region::CHUNK_DIMENSIONS) * Region::CHUNK_DIMENSIONS);
+    }
+
+    /**
+     * Like {@see getLocationOffset()}, returns a lookup table location for the chunk’s last modified time. The actual time is available via {@see getLastModified()}.
+     */
+    public function getTimestampOffset(): int
+    {
+        // These are always just 4KiB later:
+        return $this->getLocationOffset() + (Region::HEADER_LENGTH / 2);
+    }
 
     public function getDataOffset(): int
     {
@@ -57,17 +95,6 @@ class Chunk
         return $sectors * Region::CHUNK_SECTOR_LENGTH;
     }
 
-    public function getLocationOffset(): int
-    {
-        return Region::LOOKUP_CELL_LENGTH * (($this->x % Region::CHUNK_DIMENSIONS) + ($this->z % Region::CHUNK_DIMENSIONS) * Region::CHUNK_DIMENSIONS);
-    }
-
-    public function getTimestampOffset(): int
-    {
-        // These are always just 4KiB later:
-        return $this->getLocationOffset() + (Region::HEADER_LENGTH / 2);
-    }
-
     public function getLastModified(): DateTime
     {
         $data = substr($this->region->headers, $this->getTimestampOffset(), Region::LOOKUP_CELL_LENGTH);
@@ -78,6 +105,13 @@ class Chunk
         return new DateTime("@{$timestamp}");
     }
 
+    /**
+     * Returns an NBT reader instance for the compressed chunk data.
+     * 
+     * The raw chunk data begins with a header that describes the exact length of the compressed data; the length listed in the region’s header only contains the number of 4KB sectors, but the actual length will sometimes differ (i.e. due to padding):
+     * 
+     * [ L L L L F D D D D D D D ... ]
+     */
     public function getData(): ZLibCompressedStringReader|null|false
     {
         if ($this->data !== null) {
@@ -88,30 +122,30 @@ class Chunk
         $length = $this->getDataLength();
 
         // Get raw data from region blob:
-        $raw = substr($this->region->chunks, $offset, $length);
+        $raw = substr($this->region->getData(), $offset, $length);
 
-        // Find length from header:
-        $length = unpack('Nlen', substr($raw, 0, 4))['len'];
+        // Find data length from header:
+        $nbtLength = unpack('Nlen', substr($raw, 0, 4))['len'];
 
         // Get the compression format:
         $format = unpack('Nformat', "\x00\x00\x00" . substr($raw, 4, 1))['format'];
 
-        // Carve out compressed NBT data (skipping the compression type at byte 4):
-        $data = substr($raw, 5, $length);
+        // Carve out compressed NBT data (stepping over the compression type at byte 4):
+        $data = substr($raw, 5, $nbtLength);
 
         if (strlen($data) === 0) {
             return $this->data = false;
         }
 
         try {
-            $decompressed = new ZLibCompressedStringReader($data, NbtFormat::JAVA_EDITION);
+            $dataReader = new ZLibCompressedStringReader($data, NbtFormat::JAVA_EDITION);
         } catch (Exception $e) {
             Log::error("Failed to decompress data for chunk [{$this->x}, {$this->z}]: {$e->getMessage()}");
 
             return $this->data = false;
         }
 
-        return $this->data = $decompressed;
+        return $this->data = $dataReader;
     }
 
     public function getNbtData(): ?CompoundTag
@@ -177,9 +211,7 @@ class Chunk
     }
 
     public function getHighestBlockAt(int $x, int $z)
-    {
-
-    }
+    {}
 
     public function getHighestPopulatedSection(): ?Section
     {
@@ -189,5 +221,47 @@ class Chunk
         return $sections->reverse()->firstWhere(function($s) {
             return !$s->isEmpty();
         });
+    }
+
+    public function getHeightmap(string $name): LongArrayTag
+    {
+        return $this->getNbtData()
+            ->getCompound(self::NBT_KEY_HEIGHTMAP)
+            ->getLongArray($name);
+    }
+
+    public function expandHeightmap(string $name): Collection
+    {
+        $heightmap = Collection::make($this->getHeightmap($name));
+
+        return $heightmap->
+            map(function($l) {
+                $blocks = [];
+
+                for ($i = 0; $i < 7; $i++) {
+                    // The first bit is 
+                    $offset = ($i * 9);
+                    $blocks[] = Math::sliceLong($l, $offset, 9);
+                }
+
+                return $blocks;
+            })
+            // Each long is split, but we're left with an array-of-arrays:
+            ->flatten()
+            // We only want the 16x16 grid, so trim it down in case there is a straggler:
+            ->slice(0, pow(self::BLOCK_DIMENSIONS, 2));
+    }
+
+    private function getCacheKey(?string $ns = null): string
+    {
+        return join('_', array_filter([
+            'r',
+            $this->region->x,
+            $this->region->z,
+            'c',
+            $this->x,
+            $this->z,
+            $ns,
+        ]));
     }
 }
