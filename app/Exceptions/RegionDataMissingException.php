@@ -2,9 +2,13 @@
 
 namespace App\Exceptions;
 
+use App\Models\Region;
 use Exception;
 
 class RegionDataMissingException extends Exception
 {
-    protected $message = 'Region data file could not be found.';
+    public function __construct(Region $region)
+    {
+        parent::__construct("Region data file “{$region->fileName()}” could not be found.");
+    }
 }

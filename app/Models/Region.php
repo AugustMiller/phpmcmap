@@ -25,7 +25,7 @@ class Region
     )
     {
         if (!$this->fileExists()) {
-            throw new RegionDataMissingException();
+            throw new RegionDataMissingException($this);
         }
 
         // Store all headers in one blob:
