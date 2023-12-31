@@ -45,7 +45,18 @@ class Chunk
         public int $z,
     )
     {
+        $lastKnownDate = Cache::get($this->getCacheKey('modified'));
 
+        // Pre-set NBT data from cache, if it's available:
+        if ($lastKnownDate && $lastKnownDate >= $this->getLastModified()) {
+            $this->nbt = Cache::get($this->getCacheKey());
+        }
+
+        // Scrub the cache if the data has been modified more recently:
+        if ($lastKnownDate && $lastKnownDate < $this->getLastModified()) {
+            Cache::delete($this->getCacheKey('modified'));
+            Cache::delete($this->getCacheKey());
+        }
     }
 
     /**
@@ -168,6 +179,9 @@ class Chunk
             return $this->nbt = null;
         }
 
+        Cache::forever($this->getCacheKey('modified'), $this->getLastModified());
+        Cache::forever($this->getCacheKey(), $nbt);
+
         return $this->nbt = $nbt;
     }
 
@@ -252,9 +266,9 @@ class Chunk
             ->slice(0, pow(self::BLOCK_DIMENSIONS, 2));
     }
 
-    private function getCacheKey(?string $ns = null): string
+    private function getCacheKey(string $ns = 'data'): string
     {
-        return join('_', array_filter([
+        return join('_', [
             'r',
             $this->region->x,
             $this->region->z,
@@ -262,6 +276,6 @@ class Chunk
             $this->x,
             $this->z,
             $ns,
-        ]));
+        ]);
     }
 }

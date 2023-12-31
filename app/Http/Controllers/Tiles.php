@@ -28,13 +28,10 @@ class Tiles extends Controller
             $region = Coordinates::tileToRegion($zoom, $x, $z);
         } catch (RegionDataMissingException $e) {
             return response()
-                ->streamDownload(function () {
-                    $tile = new Tile('No region data.');
-
-                    $tile->writeMetadata();
-
-                    echo $tile->getImage()->getImageBlob();
-                }, 'tile.png', ['Content-Type' => 'image/png'], 'inline');
+                ->view('svg.tile-error', [
+                    'message' => $e->getMessage(),
+                ])
+                ->header('Content-Type', 'image/svg+xml');
         }
 
         $edge = Coordinates::chunksPerTile($zoom);
@@ -60,79 +57,84 @@ class Tiles extends Controller
 
         $date = $latestModificationDate ? $latestModificationDate->format('c') : 'No data';
 
-        $tile = new Tile(<<<TXT
-{$region->fileName()}
-{$chunks->count()}/{$chunksWithData->count()} chunk(s) have data
-Offset: {$offsetInRegion->x}, {$offsetInRegion->z}
-Most recently modified at:
-{$date}
-TXT);
+        // Start a buffer of rectangles to draw into the final image:
+        $rects = [];
+
+        $chunkUnit = Tile::WIDTH / $edge;
+        $blockUnit = $chunkUnit / 16;
 
         foreach ($chunksWithData as $chunk) {
             /** @var Chunk $chunk */
-            $tile->draw(function($d) use ($chunk, $offsetInRegion, $edge, $zoom) {
-                /** @var ImagickDraw $d */
 
-                try {
-                    $heightmap = $chunk->expandHeightmap(Chunk::NBT_TAG_HEIGHTMAP_MOTION_BLOCKING);
-                } catch (\Throwable $e) {
-                    Log::error("Failed to load heightmap: {$e->getMessage()}");
+            try {
+                $surface = $chunk->expandHeightmap(Chunk::NBT_TAG_HEIGHTMAP_MOTION_BLOCKING);
+                $ocean = $chunk->expandHeightmap(Chunk::NBT_TAG_HEIGHTMAP_OCEAN_FLOOR);
+            } catch (\Throwable $e) {
+                Log::error("Failed to load heightmap: {$e->getMessage()}");
 
-                    // Return empty canvas:
-                    return;
+                // Skip this chunk:
+                continue;
+            }
+
+            $chunkX = ($chunk->x - $offsetInRegion->x) * $chunkUnit;
+            $chunkZ = ($chunk->z - $offsetInRegion->z) * $chunkUnit;
+
+            foreach ($surface as $i => $surfaceHeight) {
+                $oceanHeight = $ocean[$i];
+
+                $color = [
+                    'r' => 0,
+                    'g' => 0,
+                    'b' => 0,
+                ];
+
+                $block = new Vector(
+                    x: ($i % 16) * $blockUnit,
+                    z: floor($i / 16) * $blockUnit,
+                    y: $surfaceHeight,
+                );
+
+                // Detect water bodies and simulate depth:
+                if ($surfaceHeight > $oceanHeight) {
+                    $depth = $surfaceHeight - $oceanHeight;
+                    $clamped = sqrt(min(64, $depth));
+
+                    $color['r'] = Math::scale($clamped, 0, 16, 64, 0);
+                    $color['g'] = Math::scale($clamped, 0, 16, 64, 0);
+                    $color['b'] = Math::scale($clamped, 0, 16, 200, 0);
                 }
 
-                $chunkUnit = Tile::WIDTH / $edge;
-                $blockUnit = $chunkUnit / 16;
+                // Everything else should be treated as land:
+                if ($surfaceHeight === $oceanHeight) {
+                    $value = Math::scale($block->y, 0, 255, 100, 240);
 
-                $chunkX = ($chunk->x - $offsetInRegion->x) * $chunkUnit;
-                $chunkZ = ($chunk->z - $offsetInRegion->z) * $chunkUnit;
-
-                if ($zoom <= 2) {
-                    $color = new ImagickPixel('#0000FF');
-                    $r = Math::scale($heightmap->average(), 0, 256, 0, 1);
-                    $color->setColorValue(Imagick::COLOR_RED, $r);
-                    $d->setFillColor($color);
-
-                    $d->rectangle(
-                        $chunkX,
-                        $chunkZ,
-                        $chunkX + $chunkUnit,
-                        $chunkZ + $chunkUnit,
-                    );
-
-                    return $d;
+                    $color['r'] = min(255, $value + 30);
+                    $color['g'] = min(255, $value + 30);
+                    $color['b'] = $value;
                 }
 
-                foreach ($heightmap as $i => $height) {
-                    $block = new Vector(
-                        x: ($i % 16) * $blockUnit,
-                        z: floor($i / 16) * $blockUnit,
-                        y: $height,
-                    );
+                $rect = [
+                    'x' => $chunkX + $block->x,
+                    'y' => $chunkZ + $block->z,
+                    'width' => $blockUnit,
+                    'height' => $blockUnit,
+                    'color' => "rgb({$color['r']}, {$color['g']}, {$color['b']})",
+                ];
 
-                    $color = new ImagickPixel('#000000');
-                    $g = Math::scale($block->y, 50, 200, 0, 1);
-                    $color->setColorValue(Imagick::COLOR_GREEN, $g);
-                    $d->setFillColor($color);
-
-                    $d->rectangle(
-                        $chunkX + $block->x,
-                        $chunkZ + $block->z,
-                        $chunkX + $block->x + $blockUnit,
-                        $chunkZ + $block->z + $blockUnit,
-                    );
-                }
-
-                return $d;
-            });
+                $rects[] = $rect;
+            }
         }
 
-        $tile->writeMetadata();
-
         return response()
-            ->streamDownload(function () use ($tile) {
-                echo $tile->getImage()->getImageBlob();
-            }, 'tile.png', ['Content-Type' => 'image/png'], 'inline');
+            ->view('svg.tile', [
+                'rects' => $rects,
+                'title' => "Map tile {$x}, {$z} at zoom level {$zoom}",
+            ])
+            ->header('Content-Type', 'image/svg+xml')
+            // Send some metadata with each response:
+            ->header('X-MC-Region', "{$region->x}, {$region->z}")
+            ->header('X-MC-Chunks', "{$offsetInRegion->x}, {$offsetInRegion->z} to {$offsetInRegion->x}")
+            ->header('X-MC-Data', "{$chunks->count()}/{$chunksWithData->count()}")
+            ->header('X-MC-Last-Modified', $date);
     }
 }
