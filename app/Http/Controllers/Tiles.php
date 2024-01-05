@@ -113,6 +113,9 @@ class Tiles extends Controller
                     $color['b'] = $value;
                 }
 
+                // Round color values to 
+                $color = array_map('floor', $color);
+
                 $rect = [
                     'x' => $chunkX + $block->x,
                     'y' => $chunkZ + $block->z,
