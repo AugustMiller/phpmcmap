@@ -4,6 +4,7 @@ namespace App\Helpers;
 
 use App\Models\Chunk;
 use App\Models\Region;
+use App\Models\Vector;
 
 /**
  * Utilities for converting world coordinates to other app units.
@@ -13,30 +14,45 @@ use App\Models\Region;
  */
 class Coordinates
 {
-    public static function tileToRegion(int $zoom, int $x, int $y): Region
+    public static function tileToRegion(int $zoom, int $x, int $y): Vector
     {
-        return new Region(
+        return new Vector(
             floor($x / pow(2, $zoom)),
             floor($y / pow(2, $zoom)),
         );
+
+        // return new Region(
+        //     floor($x / pow(2, $zoom)),
+        //     floor($y / pow(2, $zoom)),
+        // );
     }
 
     /**
-     * Calculates which region a chunk is in, given its X and Z location in the world.
+     * Calculates which region a *chunk* is in, given its X and Z location in the world.
      */
-    public static function chunkToRegion(int $x, int $z): Region
+    public static function chunkToRegion(int $x, int $z): Vector
     {
-        return new Region(
+        return new Vector(
             $x >> 5,
             $z >> 5,
         );
+
+        // return new Region(
+        //     $x >> 5,
+        //     $z >> 5,
+        // );
     }
 
     /**
-     * Calculates which region a block is in, given its X and Z location in the world.
+     * Calculates which region a *block* is in, given its X and Z location in the world.
      */
-    public static function blockToRegion(int $x, int $z): Region
+    public static function blockToRegion(int $x, int $z): Vector
     {
+        return new Vector(
+            $x >> 9, // ?
+            $z >> 9, // ?
+        );
+
         return new Region(
             $x >> 9, // ?
             $z >> 9, // ?
@@ -44,11 +60,12 @@ class Coordinates
     }
 
     /**
-     * Returns which chunk a block belongs to.
+     * Returns the chunk a block at the given world coordinates belongs to.
      */
     public static function blockToChunk(int $x, int $z): Chunk
     {
-        $region = static::blockToRegion($x, $z);
+        $vec = static::blockToRegion($x, $z);
+        $region = new Region($vec->x, $vec->z);
 
         return $region->getChunk(
             $x >> 4,
@@ -80,5 +97,15 @@ class Coordinates
     public static function chunksPerTile(int $zoom): int
     {
         return Region::CHUNK_DIMENSIONS >> $zoom;
+    }
+
+    /**
+     * Parses the region coordinates out of a filename.
+     */
+    public static function fromFilename(string $filename): Vector
+    {
+        list($r, $x, $z, $ext) = explode('.', $filename);
+
+        return new Vector(intval($x), intval($z));
     }
 }

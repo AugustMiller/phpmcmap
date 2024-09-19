@@ -3,15 +3,14 @@
 namespace App\Models;
 
 use App\Helpers\Math;
-use DateTime;
 use Aternos\Nbt\IO\Reader\ZLibCompressedStringReader;
 use Aternos\Nbt\NbtFormat;
 use Aternos\Nbt\Tag\CompoundTag;
 use Aternos\Nbt\Tag\LongArrayTag;
 use Aternos\Nbt\Tag\Tag;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -44,20 +43,7 @@ class Chunk
         public int $x,
         public int $z,
     )
-    {
-        $lastKnownDate = Cache::get($this->getCacheKey('modified'));
-
-        // Pre-set NBT data from cache, if it's available:
-        if ($lastKnownDate && $lastKnownDate >= $this->getLastModified()) {
-            $this->nbt = Cache::get($this->getCacheKey());
-        }
-
-        // Scrub the cache if the data has been modified more recently:
-        if ($lastKnownDate && $lastKnownDate < $this->getLastModified()) {
-            Cache::delete($this->getCacheKey('modified'));
-            Cache::delete($this->getCacheKey());
-        }
-    }
+    {}
 
     /**
      * Returns the offset for the chunk's data location in the header table.
@@ -78,7 +64,7 @@ class Chunk
 
     public function getDataOffset(): int
     {
-        $data = substr($this->region->locations, $this->getLocationOffset(), Region::LOOKUP_CELL_LENGTH);
+        $data = substr($this->region->getChunkLocations(), $this->getLocationOffset(), Region::LOOKUP_CELL_LENGTH);
 
         // Unsigned long, 32 bit, big endian:
         $padded = "\x00" . substr($data, 0, 3);
@@ -89,7 +75,7 @@ class Chunk
 
     public function getDataLength(): int
     {
-        $data = substr($this->region->locations, $this->getLocationOffset(), Region::LOOKUP_CELL_LENGTH);
+        $data = substr($this->region->getChunkLocations(), $this->getLocationOffset(), Region::LOOKUP_CELL_LENGTH);
 
         // Unsigned long, 32 bit, big endian:
         $padded = "\x00\x00\x00" . substr($data, 3, 1);
@@ -106,14 +92,14 @@ class Chunk
         return $sectors * Region::CHUNK_SECTOR_LENGTH;
     }
 
-    public function getLastModified(): DateTime
+    public function getLastModified(): Carbon
     {
-        $data = substr($this->region->headers, $this->getTimestampOffset(), Region::LOOKUP_CELL_LENGTH);
+        $data = substr($this->region->getHeaders(), $this->getTimestampOffset(), Region::LOOKUP_CELL_LENGTH);
 
         // Unsigned long, 32 bit, big endian:
         $timestamp = unpack('Nts', $data)['ts'];
 
-        return new DateTime("@{$timestamp}");
+        return Carbon::createFromTimestamp($timestamp);
     }
 
     /**
@@ -131,6 +117,10 @@ class Chunk
 
         $offset = $this->getDataOffset();
         $length = $this->getDataLength();
+
+        if ($length === 0) {
+            return null;
+        }
 
         // Get raw data from region blob:
         $raw = substr($this->region->getData(), $offset, $length);
@@ -178,9 +168,6 @@ class Chunk
 
             return $this->nbt = null;
         }
-
-        Cache::forever($this->getCacheKey('modified'), $this->getLastModified());
-        Cache::forever($this->getCacheKey(), $nbt);
 
         return $this->nbt = $nbt;
     }
@@ -237,7 +224,7 @@ class Chunk
         });
     }
 
-    public function getHeightmap(string $name): LongArrayTag
+    public function getHeightmap(string $name): ?LongArrayTag
     {
         return $this->getNbtData()
             ->getCompound(self::NBT_KEY_HEIGHTMAP)
@@ -253,16 +240,14 @@ class Chunk
                 $blocks = [];
 
                 for ($i = 0; $i < 7; $i++) {
-                    // The first bit is 
-                    $offset = ($i * 9);
-                    $blocks[] = Math::sliceLong($l, $offset, 9);
+                    $blocks[] = Math::sliceLong($l, $i * 9, 9);
                 }
 
                 return $blocks;
             })
-            // Each long is split, but we're left with an array-of-arrays:
+            // Each long is split, so we're left with an array-of-arrays:
             ->flatten()
-            // We only want the 16x16 grid, so trim it down in case there is a straggler:
+            // We only want the 16x16 grid, so trim it down in case there is a straggler from unpacking the longs:
             ->slice(0, pow(self::BLOCK_DIMENSIONS, 2));
     }
 

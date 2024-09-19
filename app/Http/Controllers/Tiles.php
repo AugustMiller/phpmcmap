@@ -2,34 +2,36 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\RegionDataMissingException;
 use App\Helpers\Coordinates;
 use App\Helpers\Math;
-use App\Models\Chunk;
-use App\Models\Tile;
+use App\Models\DbChunk;
+use App\Models\DbRegion;
 use App\Models\Vector;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Log;
-use Imagick;
-use ImagickPixel;
 
 /**
  * Tiles Controller
  * 
- * Responsible for rendering individual tile PNGs.
+ * Responsible for preparing data for individual tile SVG documents.
  * 
  * The minimum zoom level (0) will return a tile that represents an entire region file, so there is at most one region file open per request. The {@see App\Helpers\Coordinates} class contains logic for translating different types of coordinates according to the Minecraft Anvil storage format.
  */
 class Tiles extends Controller
 {
+    public const TILE_WIDTH = 256;
+
     public function render(int $zoom, int $x, int $z)
     {
-        try {
-            $region = Coordinates::tileToRegion($zoom, $x, $z);
-        } catch (RegionDataMissingException $e) {
+        $region = Coordinates::tileToRegion($zoom, $x, $z);
+        $dbRegion = DbRegion::firstWhere([
+            'x' => $region->x,
+            'z' => $region->z,
+        ]);
+
+        if (!$dbRegion) {
             return response()
                 ->view('svg.tile-error', [
-                    'message' => $e->getMessage(),
+                    'message' => "Could not locate region [{$x}, {$z}]!",
                 ])
                 ->header('Content-Type', 'image/svg+xml');
         }
@@ -41,45 +43,33 @@ class Tiles extends Controller
             z: Math::modPositive($z, $tilesPerRegion) * $edge,
         );
 
-        $chunks = $region->getChunksFrom(
+        $chunks = $dbRegion->chunksFrom(
             $offsetInRegion->x,
             $offsetInRegion->z,
             $edge,
             $edge,
-        );
+        )->get();
 
-        $chunksWithData = $chunks
-            ->filter(fn($c) => $c->getDataLength());
-
-        $latestModificationDate = $chunksWithData
-            ->map(fn($c) => $c->getLastModified())
-            ->max();
-
-        $date = $latestModificationDate ? $latestModificationDate->format('c') : 'No data';
+        $lastModified = $chunks->min('last_modified');
 
         // Start a buffer of rectangles to draw into the final image:
         $rects = [];
 
-        $chunkUnit = Tile::WIDTH / $edge;
+        $chunkUnit = self::TILE_WIDTH / $edge;
         $blockUnit = $chunkUnit / 16;
 
-        foreach ($chunksWithData as $chunk) {
-            /** @var Chunk $chunk */
+        foreach ($chunks as $chunk) {
+            /** @var DbChunk $chunk */
 
-            try {
-                $surface = $chunk->expandHeightmap(Chunk::NBT_TAG_HEIGHTMAP_MOTION_BLOCKING);
-                $ocean = $chunk->expandHeightmap(Chunk::NBT_TAG_HEIGHTMAP_OCEAN_FLOOR);
-            } catch (\Throwable $e) {
-                Log::error("Failed to load heightmap: {$e->getMessage()}");
+            $surface = $chunk->heightmap_motion_blocking;
+            $ocean = $chunk->heightmap_ocean_floor;
 
-                // Skip this chunk:
-                continue;
-            }
-
+            // Set base offsets so blocks in the heightmap can be drawn in the correct location:
             $chunkX = ($chunk->x - $offsetInRegion->x) * $chunkUnit;
             $chunkZ = ($chunk->z - $offsetInRegion->z) * $chunkUnit;
 
             foreach ($surface as $i => $surfaceHeight) {
+                // Load the same index from the ocean_floor heightmap:
                 $oceanHeight = $ocean[$i];
 
                 $color = [
@@ -136,8 +126,8 @@ class Tiles extends Controller
             ->header('Content-Type', 'image/svg+xml')
             // Send some metadata with each response:
             ->header('X-MC-Region', "{$region->x}, {$region->z}")
-            ->header('X-MC-Chunks', "{$offsetInRegion->x}, {$offsetInRegion->z} to {$offsetInRegion->x}")
-            ->header('X-MC-Data', "{$chunks->count()}/{$chunksWithData->count()}")
-            ->header('X-MC-Last-Modified', $date);
+            ->header('X-MC-Chunks', "{$edge}x{$edge} from [{$offsetInRegion->x}, {$offsetInRegion->z}]")
+            ->header('X-MC-Data', $chunks->count())
+            ->header('X-MC-Last-Modified', $lastModified);
     }
 }
