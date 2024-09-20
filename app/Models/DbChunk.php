@@ -54,4 +54,12 @@ class DbChunk extends Model
     {
         return $this->belongsTo(DbRegion::class, null, 'region_id');
     }
+
+    /**
+     * Returns whether the heightmaps are populated.
+     */
+    public function hasHeightmaps(): bool
+    {
+        return !$this->heightmap_motion_blocking->isEmpty() && !$this->heightmap_ocean_floor->isEmpty();
+    }
 }

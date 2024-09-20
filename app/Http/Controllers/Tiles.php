@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\Color;
 use App\Helpers\Coordinates;
 use App\Helpers\Math;
 use App\Models\DbChunk;
@@ -31,7 +32,9 @@ class Tiles extends Controller
         if (!$dbRegion) {
             return response()
                 ->view('svg.tile-error', [
-                    'message' => "Could not locate region [{$x}, {$z}]!",
+                    'message' => "No data exists for region [{$x}, {$z}].",
+                    'x' => $x,
+                    'z' => $z,
                 ])
                 ->header('Content-Type', 'image/svg+xml');
         }
@@ -50,6 +53,12 @@ class Tiles extends Controller
             $edge,
         )->get();
 
+        // Filter out chunks without heightmap data:
+        $chunks = $chunks->filter(function ($c) {
+            return $c->hasHeightmaps();
+        });
+
+        // From those, grab the earliest modified time (we'll send this as a header, later):
         $lastModified = $chunks->min('last_modified');
 
         // Start a buffer of rectangles to draw into the final image:
@@ -68,16 +77,53 @@ class Tiles extends Controller
             $chunkX = ($chunk->x - $offsetInRegion->x) * $chunkUnit;
             $chunkZ = ($chunk->z - $offsetInRegion->z) * $chunkUnit;
 
+            // We'll handle rendering a little differently when zoomed out:
+            if ($zoom < 3) {
+                $avgSurfaceHeight = $surface->average();
+                $avgOceanDepth = $ocean->average();
+
+                $isWater = $avgOceanDepth < $avgSurfaceHeight;
+
+                $rect = [
+                    'x' => $chunkX,
+                    'y' => $chunkZ,
+                    'width' => $chunkUnit,
+                    'height' => $chunkUnit,
+                    'color' => 'tan',
+                ];
+
+                if ($isWater) {
+                    $depth = $avgSurfaceHeight - $avgOceanDepth;
+                    $clamped = sqrt(min(64, $depth));
+
+                    $rect['color'] = new Color(
+                        Math::scale($clamped, 0, 16, 64, 0),
+                        Math::scale($clamped, 0, 16, 64, 0),
+                        Math::scale($clamped, 0, 16, 200, 0),
+                    );
+                } else {
+                    $value = Math::scale($avgSurfaceHeight, 0, 255, 100, 240);
+
+                    $rect['color'] = new Color(
+                        min(255, $value + 30),
+                        min(255, $value + 30),
+                        $value,
+                    );
+                }
+
+                $rects[] = $rect;
+
+                // Nothing else to process, here!
+                continue;
+            }
+
             foreach ($surface as $i => $surfaceHeight) {
                 // Load the same index from the ocean_floor heightmap:
                 $oceanHeight = $ocean[$i];
 
-                $color = [
-                    'r' => 0,
-                    'g' => 0,
-                    'b' => 0,
-                ];
+                $color = new Color;
 
+                // Heightmaps are stored as one-dimensional arrays, one row after another. You can get the X and Z coordinate for each elevation reading via the remainder after division:
                 $block = new Vector(
                     x: ($i % 16) * $blockUnit,
                     z: floor($i / 16) * $blockUnit,
@@ -89,34 +135,33 @@ class Tiles extends Controller
                     $depth = $surfaceHeight - $oceanHeight;
                     $clamped = sqrt(min(64, $depth));
 
-                    $color['r'] = Math::scale($clamped, 0, 16, 64, 0);
-                    $color['g'] = Math::scale($clamped, 0, 16, 64, 0);
-                    $color['b'] = Math::scale($clamped, 0, 16, 200, 0);
+                    $color->r = Math::scale($clamped, 0, 16, 64, 0);
+                    $color->g = Math::scale($clamped, 0, 16, 64, 0);
+                    $color->b = Math::scale($clamped, 0, 16, 200, 0);
                 }
 
                 // Everything else should be treated as land:
                 if ($surfaceHeight === $oceanHeight) {
                     $value = Math::scale($block->y, 0, 255, 100, 240);
 
-                    $color['r'] = min(255, $value + 30);
-                    $color['g'] = min(255, $value + 30);
-                    $color['b'] = $value;
+                    $color->r = min(255, $value + 30);
+                    $color->g = min(255, $value + 30);
+                    $color->b = $value;
                 }
-
-                // Round color values to 
-                $color = array_map('floor', $color);
 
                 $rect = [
                     'x' => $chunkX + $block->x,
                     'y' => $chunkZ + $block->z,
                     'width' => $blockUnit,
                     'height' => $blockUnit,
-                    'color' => "rgb({$color['r']}, {$color['g']}, {$color['b']})",
+                    // Round color values to simplify SVG output:
+                    'color' => $color->round(),
                 ];
 
                 $rects[] = $rect;
             }
         }
+
 
         return response()
             ->view('svg.tile', [

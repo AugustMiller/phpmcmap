@@ -9,6 +9,11 @@ use Illuminate\Routing\Controller;
 
 class Metadata extends Controller
 {
+    public function players()
+    {
+        
+    }
+
     public function blockInfo(int $x, int $z, int $y, Request $request)
     {
         $chunk = Coordinates::blockToChunk($x, $z);
