@@ -46,8 +46,10 @@ class DbRegion extends Model
                 'z' => $chunk->z,
             ]);
 
-            if ($mod->gte($dbChunk->last_modified)) {
-                // Nothing to update!
+            $needsUpdate = $dbChunk->last_modified === null || $mod->gt($dbChunk->last_modified);
+
+            if (!$needsUpdate) {
+                // Nothing more to do, here!
                 continue;
             }
 
