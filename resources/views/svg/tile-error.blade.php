@@ -5,6 +5,18 @@
             fill: rgb(50, 50, 50);
         }
 
+        .border {
+            fill: none;
+            stroke: rgb(65, 65, 65);
+            stroke-dasharray: 5px;
+            stroke-width: 1px;
+        }
+
+        .x {
+            stroke: rgb(100, 100, 100);
+            stroke-width: 1px;
+        }
+
         .error {
             fill: rgb(140, 140, 140);
             font-family: monospace;
@@ -26,13 +38,23 @@
         height="256"
         class="ground"></rect>
 
+    <rect
+        x="5"
+        y="5"
+        width="246"
+        height="246"
+        class="border"></rect>
+
+    <line x1="100" y1="100" x2="156" y2="156" class="x" />
+    <line x1="156" y1="100" x2="100" y2="156" class="x" />
+
     <text
-        x="10"
+        x="15"
         y="25"
         class="error">Error!</text>
 
     <text
-        x="10"
+        x="15"
         y="40"
         class="message">{{ $message }}</text>
 </svg>
