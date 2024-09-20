@@ -46,7 +46,7 @@ class Import extends Command
                 'z' => $vec->z,
             ]);
 
-            $needsUpdate = $dbRegion->last_modified === null || $fileMod->gte($dbRegion->last_modified);
+            $needsUpdate = $dbRegion->last_modified === null || $fileMod->gt($dbRegion->last_modified);
 
             if (!$needsUpdate) {
                 $this->info("Region [{$dbRegion->x}, {$dbRegion->z}] has not been modified.");
@@ -54,7 +54,15 @@ class Import extends Command
                 continue;
             }
 
-            $this->info("Region [{$dbRegion->x}, {$dbRegion->z}] is new or has been modified since we last checked.");
+            $this->info("Region [{$dbRegion->x}, {$dbRegion->z}] needs an update.");
+
+            if ($dbRegion->last_modified === null) {
+                $this->info("  -> There is no history in the database.");
+            } else {
+                $this->info("  -> The database was last updated at {$dbRegion->last_modified->toAtomString()}.");
+            }
+
+            $this->info("  -> The region file was last modified at {$fileMod->toAtomString()}");
 
             $region = new Region($vec->x, $vec->z);
             $dbRegion->refreshFrom($region);
