@@ -80,3 +80,26 @@ L.Control.WorldCoordinates = L.Control.extend({
 });
 
 (new L.Control.WorldCoordinates({ position: 'bottomleft' })).addTo(map);
+
+// Add markers for players:
+fetch('/api/players')
+    .then((r) => r.json())
+    .then((players) => {
+        for (let p in players) {
+            const player = players[p];
+
+            // Ignore anyone who isn't in the overworld:
+            if (player.dimension !== 'minecraft:overworld') {
+                continue;
+            }
+
+            // Player positions are provided as [X, Y, Z] (Lng, El, Lat)
+
+            L.marker([player.position[2] / 8, player.position[0] / 8], {
+                icon: L.divIcon({
+                    className: 'player',
+                    html: player.name,
+                }),
+            }).addTo(map);
+        }
+    });

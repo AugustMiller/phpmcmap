@@ -49,6 +49,12 @@ return [
             'root' => storage_path('region'),
             'visibility' => 'private',
         ],
+
+        'misc' =>[
+            'driver' => 'local',
+            'root' => storage_path('misc'),
+            'visibility' => 'private',
+        ],
     ],
 
     /*

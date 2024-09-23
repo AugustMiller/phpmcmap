@@ -6,3 +6,8 @@ body {
 #map {
     height: 100vh;
 }
+
+.player {
+    background-color: white;
+    border-radius: 2px;
+}

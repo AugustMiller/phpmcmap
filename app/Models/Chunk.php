@@ -138,6 +138,7 @@ class Chunk
             return $this->data = false;
         }
 
+        /** @todo Refactor this to use [[Data::parseNbt()]]! */
         try {
             $dataReader = new ZLibCompressedStringReader($data, NbtFormat::JAVA_EDITION);
         } catch (Exception $e) {

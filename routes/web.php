@@ -25,4 +25,7 @@ Route::get('/api/tiles/{zoom}/{x}/{z}', [Tiles::class, 'render'])
     ->name('tile');
 
 
-Route::get('/api/blocks/{x}/{z}/{y}', [Metadata::class, 'blockInfo']);
+Route::get('/api/blocks/{x}/{z}/{y}', [Metadata::class, 'block']);
+
+Route::get('/api/level', [Metadata::class, 'level']);
+Route::get('/api/players', [Metadata::class, 'players']);
