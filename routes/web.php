@@ -24,8 +24,8 @@ Route::get('/api/tiles/{zoom}/{x}/{z}', [Tiles::class, 'render'])
     ->where(['x', 'z'], '-?[0-9]+')
     ->name('tile');
 
-
-Route::get('/api/blocks/{x}/{z}/{y}', [Metadata::class, 'block']);
-
 Route::get('/api/level', [Metadata::class, 'level']);
 Route::get('/api/players', [Metadata::class, 'players']);
+Route::get('/api/poi/{x1},{z1}/{x2},{z2}', [Metadata::class, 'poi'])
+    // Same as above, `whereNumber` does not support negative values!
+    ->where(['x1', 'z1', 'x2', 'z2'], '-?[0-9]+');

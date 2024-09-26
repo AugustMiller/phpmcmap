@@ -6,6 +6,7 @@ use App\Helpers\Math;
 use Aternos\Nbt\IO\Reader\ZLibCompressedStringReader;
 use Aternos\Nbt\NbtFormat;
 use Aternos\Nbt\Tag\CompoundTag;
+use Aternos\Nbt\Tag\ListTag;
 use Aternos\Nbt\Tag\LongArrayTag;
 use Aternos\Nbt\Tag\Tag;
 use Carbon\Carbon;
@@ -252,16 +253,11 @@ class Chunk
             ->slice(0, pow(self::BLOCK_DIMENSIONS, 2));
     }
 
-    private function getCacheKey(string $ns = 'data'): string
+    /**
+     * Returns block entities or “POI,” colloquially.
+     */
+    public function getBlockEntities(): ListTag
     {
-        return join('_', [
-            'r',
-            $this->region->x,
-            $this->region->z,
-            'c',
-            $this->x,
-            $this->z,
-            $ns,
-        ]);
+        return $this->getNbtData()->getList('block_entities');
     }
 }

@@ -6,11 +6,12 @@ const map = L.map($container, {
 
 L.tileLayer('/api/tiles/{z}/{x}/{y}', {
     minZoom: 0,
-    maxZoom: 4,
+    maxZoom: 5,
     noWrap: true,
     updateWhenZooming: false,
     updateInterval: 200,
     keepBuffer: 4,
+    tileSize: 512,
 }).addTo(map);
 
 // Add a home marker:
@@ -60,14 +61,8 @@ L.Control.WorldCoordinates = L.Control.extend({
     },
 
     onMapMouseMove: function(e) {
-        const dimensions = map.getSize();
-        const blockScale = Math.pow(2, this.map.getZoom() - 1);
-
-        const normalizedMouseX = e.layerPoint.x - (dimensions.x / 2);
-        const normalizedMouseY = e.layerPoint.y - (dimensions.y / 2);
-
-        const worldX = normalizedMouseX / blockScale;
-        const worldZ = normalizedMouseY / blockScale;
+        const worldX = e.latlng.lng;
+        const worldZ = -e.latlng.lat;
 
         this.$block.innerText = `Block: ${Math.floor(worldX)}, ${Math.floor(worldZ)}`;
         this.$chunk.innerText = `Chunk: ${Math.floor(worldX / 16)}, ${Math.floor(worldZ / 16)}`;
@@ -94,8 +89,10 @@ fetch('/api/players')
             }
 
             // Player positions are provided as [X, Y, Z] (Lng, El, Lat)
+            // The Minecraft Z coordinate (Y) is inverted from Leaflet!
+            const [x, y, z] = player.position;
 
-            L.marker([player.position[2] / 8, player.position[0] / 8], {
+            L.marker([-z, x], {
                 icon: L.divIcon({
                     className: 'player',
                     html: player.name,
@@ -103,3 +100,65 @@ fetch('/api/players')
             }).addTo(map);
         }
     });
+
+const poi = [];
+
+const clearPoi = function() {
+    // Remove from map:
+    poi.forEach(function(p) {
+        p.remove();
+    });
+
+    // Discard marker objects:
+    poi.length = 0;
+};
+
+const getPoi = function(bounds) {
+    const nw = bounds.getNorthWest();
+    const se = bounds.getSouthEast();
+
+    console.log(bounds);
+
+    return fetch(`/api/poi/${Math.ceil(nw.lng)},${Math.ceil(nw.lat)}/${Math.floor(se.lng)},${Math.floor(se.lat)}`)
+        .then(function(res) {
+            return res.json();
+        });
+};
+
+const addPoi = function(entities) {
+    entities.forEach(function(e) {
+        const type = e.entity_type.replace('minecraft:', '');
+
+        // Only add signs, for now:
+        if (type !== 'sign') {
+            return;
+        }
+
+        let message = e.metadata.front_text.messages
+            .map(m => JSON.parse(m))
+            .filter(l => l.length)
+            .join('\n');
+
+        console.log(message);
+
+        const marker = L.marker([e.z, e.x], {
+            title: message,
+            icon: L.divIcon({
+                className: `poi poi--type-${type}`,
+                size: [32, 32],
+                iconAnchor: [16, 32],
+                tooltipAnchor: [16, 0],
+            }),
+        });
+
+        marker.addTo(map);
+
+        poi.push(marker);
+    });
+};
+
+map.on('moveend', function(e) {
+    clearPoi();
+    getPoi(map.getBounds())
+        .then(addPoi);
+});

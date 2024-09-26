@@ -2,16 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\Coordinates;
 use App\Helpers\Data;
-use App\Helpers\Math;
+use App\Models\DbPoi;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 
 class Metadata extends Controller
 {
-    public function level()
+    public function level(Request $request)
     {
         $fs = Storage::disk('misc');
         $nbt = Data::parseNbt($fs->get('level.dat'));
@@ -19,7 +18,7 @@ class Metadata extends Controller
         return response()->json($nbt->jsonSerialize());
     }
 
-    public function players()
+    public function players(Request $request)
     {
         $fs = Storage::disk('misc');
         $files = collect($fs->files('playerdata'))->reject(fn($f) => str_ends_with($f, 'dat_old'));
@@ -38,21 +37,33 @@ class Metadata extends Controller
             $player['position'] = $data->getList('Pos');
             $player['dimension'] = $data->getString('Dimension');
 
+            $death = $data->getCompound('LastDeathLocation');
+
+            if ($death) {
+                $player['lastDeath'] = [
+                    'dimension' => $death->getString('dimension'),
+                    'position' => $death->getIntArray('pos'),
+                ];
+            }
+
             $players[] = $player;
         }
 
         return response()->json($players);
     }
 
-    public function block(int $x, int $z, int $y, Request $request)
+    public function poi(Request $request, int $x1, int $z1, int $x2, int $z2)
     {
-        $chunk = Coordinates::blockToChunk($x, $z);
-        $block = $chunk->getBlock(
-            Math::modPositive($x, 16),
-            Math::modPositive($z, 16),
-            $y,
-        );
+        $type = $request->query('type');
 
-        return 'Hello!';
+        $poiQuery = DbPoi::query()
+            ->whereBetween('x', [min($x1, $x2), max($x1, $x2)])
+            ->whereBetween('z', [min($z1, $z2), max($z1, $z2)]);
+
+        if ($type) {
+            $poiQuery->where('entity_type', "minecraft:{$type}");
+        }
+
+        return response()->json($poiQuery->get());
     }
 }
