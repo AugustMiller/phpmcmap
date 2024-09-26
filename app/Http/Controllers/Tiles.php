@@ -53,11 +53,6 @@ class Tiles extends Controller
             $edge,
         )->get();
 
-        // Filter out chunks without heightmap data:
-        $chunks = $chunks->filter(function ($c) {
-            return $c->hasHeightmaps();
-        });
-
         // From those, grab the earliest modified time (we'll send this as a header, later):
         $lastModified = $chunks->min('last_modified');
 
@@ -70,17 +65,19 @@ class Tiles extends Controller
         foreach ($chunks as $chunk) {
             /** @var DbChunk $chunk */
 
-            $surface = $chunk->heightmap_motion_blocking;
-            $ocean = $chunk->heightmap_ocean_floor;
+            // Do we have data to work with?
+            if (!$chunk->hasHeightmaps()) {
+                continue;
+            }
 
             // Set base offsets so blocks in the heightmap can be drawn in the correct location:
             $chunkX = ($chunk->x - $offsetInRegion->x) * $chunkUnit;
             $chunkZ = ($chunk->z - $offsetInRegion->z) * $chunkUnit;
 
             // We'll handle rendering a little differently when zoomed out:
-            if ($zoom < 3) {
-                $avgSurfaceHeight = $surface->average();
-                $avgOceanDepth = $ocean->average();
+            if ($zoom < 2) {
+                $avgSurfaceHeight = $chunk->average_height_motion_blocking;
+                $avgOceanDepth = $chunk->average_height_ocean_floor;
 
                 $isWater = $avgOceanDepth < $avgSurfaceHeight;
 
@@ -116,6 +113,10 @@ class Tiles extends Controller
                 // Nothing else to process, here!
                 continue;
             }
+
+            // Load up the completed heightmap data—we'll need them for rendering individual blocks!
+            $surface = $chunk->heightmap_motion_blocking;
+            $ocean = $chunk->heightmap_ocean_floor;
 
             foreach ($surface as $i => $surfaceHeight) {
                 // Load the same index from the ocean_floor heightmap:
