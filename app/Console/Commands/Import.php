@@ -17,7 +17,7 @@ class Import extends Command
      *
      * @var string
      */
-    protected $signature = 'app:import';
+    protected $signature = 'app:import {--force}';
 
     /**
      * The console command description.
@@ -34,6 +34,7 @@ class Import extends Command
         $fs = Storage::disk('region');
         $files = $fs->files();
         $count = count($files);
+        $updated = 0;
 
         $this->info("Found {$count} region files...");
 
@@ -46,7 +47,7 @@ class Import extends Command
                 'z' => $vec->z,
             ]);
 
-            $needsUpdate = $dbRegion->last_modified === null || $fileMod->gt($dbRegion->last_modified);
+            $needsUpdate = $this->option('force') || $dbRegion->last_modified === null || $fileMod->gt($dbRegion->last_modified);
 
             if (!$needsUpdate) {
                 $this->info("Region [{$dbRegion->x}, {$dbRegion->z}] has not been modified.");
@@ -54,23 +55,27 @@ class Import extends Command
                 continue;
             }
 
+            $updated++;
+
             $this->info("Region [{$dbRegion->x}, {$dbRegion->z}] needs an update.");
 
             if ($dbRegion->last_modified === null) {
-                $this->info("  -> There is no history in the database.");
+                $this->line("  -> There is no history in the database.");
             } else {
-                $this->info("  -> The database was last updated at {$dbRegion->last_modified->toAtomString()}.");
+                $this->line("  -> The database was last updated at {$dbRegion->last_modified->toAtomString()}.");
             }
 
-            $this->info("  -> The region file was last modified at {$fileMod->toAtomString()}");
+            $this->line("  -> The region file was last modified at {$fileMod->toAtomString()}");
 
             $region = new Region($vec->x, $vec->z);
-            $dbRegion->refreshFrom($region);
+            $dbRegion->refreshFrom($region, $this->option('force'));
 
             // Update the timestamp:
             $dbRegion->last_modified = $fileMod;
             $dbRegion->save();
         }
+
+        $this->info(sprintf('Finished updating %d of %d regions.', $updated, $count));
 
         return 0;
     }

@@ -14,6 +14,11 @@ class DbRegion extends Model
     /**
      * @inheritdoc
      */
+    public $fillable = ['x', 'z'];
+
+    /**
+     * @inheritdoc
+     */
     protected $table = 'regions';
 
     /**
@@ -24,11 +29,33 @@ class DbRegion extends Model
     ];
 
     /**
-     * @inheritdoc
+     * Chunks belonging to this region. Maximum 1024 (32 * 32).
      */
-    public $fillable = ['x', 'z'];
+    public function chunks(): HasMany
+    {
+        return $this->hasMany(DbChunk::class, 'region_id');
+    }
 
-    public function refreshFrom(Region $region)
+    /**
+     * Loads chunks in a rectangle with the given width $dx and height $dz, starting at point $x, $z.
+     * 
+     * You may apply additional constraints on the returned query.
+     */
+    public function chunksFrom(int $x, int $z, int $dx, int $dz): HasMany
+    {
+        return $this->chunks()
+            ->where([
+                ['x', '>=', $x],
+                ['x', '<', $x + $dx],
+                ['z', '>=', $z],
+                ['z', '<', $z + $dz],
+            ]);
+    }
+
+    /**
+     * Populates the database from the given region file model.
+     */
+    public function refreshFrom(Region $region, bool $forceUpdate = false)
     {
         $chunks = $region->getChunksFrom(0, 0, Region::CHUNK_DIMENSIONS, Region::CHUNK_DIMENSIONS);
 
@@ -46,35 +73,14 @@ class DbRegion extends Model
                 'z' => $chunk->z,
             ]);
 
-            $needsUpdate = $dbChunk->last_modified === null || $mod->gt($dbChunk->last_modified);
+            $needsUpdate = $forceUpdate || $dbChunk->last_modified === null || $mod->gt($dbChunk->last_modified);
 
             if (!$needsUpdate) {
                 // Nothing more to do, here!
                 continue;
             }
 
-            // Update the heightmaps:
-            $dbChunk->heightmap_motion_blocking = $chunk->expandHeightmap(Chunk::NBT_TAG_HEIGHTMAP_MOTION_BLOCKING)->all();
-            $dbChunk->heightmap_ocean_floor = $chunk->expandHeightmap(Chunk::NBT_TAG_HEIGHTMAP_OCEAN_FLOOR)->all();
-
-            $dbChunk->last_modified = $mod;
-            $dbChunk->save();
+            $dbChunk->refreshFrom($chunk);
         }
-    }
-
-    public function chunks(): HasMany
-    {
-        return $this->hasMany(DbChunk::class, 'region_id');
-    }
-
-    public function chunksFrom(int $x, int $z, int $dx, int $dz): HasMany
-    {
-        return $this->chunks()
-            ->where([
-                ['x', '>=', $x],
-                ['x', '<=', $x + $dx],
-                ['z', '>=', $z],
-                ['z', '<=', $z + $dz],
-            ]);
     }
 }
