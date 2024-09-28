@@ -44,13 +44,13 @@ return [
             'throw' => false,
         ],
 
-        'region' =>[
+        'region' => [
             'driver' => 'local',
             'root' => storage_path('region'),
             'visibility' => 'private',
         ],
 
-        'misc' =>[
+        'misc' => [
             'driver' => 'local',
             'root' => storage_path('misc'),
             'visibility' => 'private',
