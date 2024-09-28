@@ -21,9 +21,12 @@ L.tileLayer('/api/tiles/{z}/{x}/{y}', {
     tileSize: 512,
 }).addTo(map);
 
+// Home Marker
+
 L.marker(spawn).addTo(map);
 
-// Set up our coordinate output:
+// Coordinate Widget
+
 L.Control.WorldCoordinates = L.Control.extend({
     map: null,
     $block: null,
@@ -82,7 +85,8 @@ L.Control.WorldCoordinates = L.Control.extend({
 
 (new L.Control.WorldCoordinates({ position: 'bottomleft' })).addTo(map);
 
-// Add markers for players:
+// Player Positions
+
 fetch('/api/players')
     .then((r) => r.json())
     .then((players) => {
@@ -107,64 +111,117 @@ fetch('/api/players')
         }
     });
 
+// Points of Interest
+
 const poi = [];
 
-const clearPoi = function() {
-    // Remove from map:
-    poi.forEach(function(p) {
-        p.remove();
-    });
+const clearPoi = function(entities) {
+    const newIds = entities.map(p => p.id);
+    const existingIds = poi.map(p => p.__MC_ENTITY_ID__);
 
-    // Discard marker objects:
-    poi.length = 0;
+    // Remove anything that is no longer in view:
+    let i = poi.length;
+    while (i--) {
+        const p = poi[i];
+
+        if (!p.__MC_ENTITY_ID__ in newIds) {
+            p.remove();
+            poi.splice(poi[i], 1);
+
+            continue;
+        }
+    }
+
+    // Filter out any entities already on the map:
+    return entities.filter(function(e) {
+        return !existingIds.includes(e.id);
+    });
 };
 
 const getPoi = function(bounds) {
     const nw = bounds.getNorthWest();
     const se = bounds.getSouthEast();
 
-    console.log(bounds);
-
-    return fetch(`/api/poi/${Math.ceil(nw.lng)},${Math.ceil(nw.lat)}/${Math.floor(se.lng)},${Math.floor(se.lat)}`)
+    return fetch(`/api/poi/${Math.ceil(nw.lng)},${-Math.ceil(nw.lat)}/${Math.floor(se.lng)},${-Math.floor(se.lat)}`)
         .then(function(res) {
             return res.json();
         });
 };
 
 const addPoi = function(entities) {
-    entities.forEach(function(e) {
-        const type = e.entity_type.replace('minecraft:', '');
+    entities.forEach(function(entity) {
+        const type = cleanEntityId(entity.entity_type);
+        let marker = null;
 
-        // Only add signs, for now:
-        if (type !== 'sign') {
+        if (type === 'sign') {
+            marker = createSignMarker(entity);
+        }
+
+        if (type === 'beehive') {
+            marker = createSymbolMarker(entity, 'Beehive');
+        }
+
+        if (type === 'mob_spawner') {
+            marker = createSymbolMarker(entity, `Mob spawner (${cleanEntityId(entity.metadata.SpawnData.entity.id)})`);
+        }
+
+        if (!marker) {
             return;
         }
 
-        let message = e.metadata.front_text.messages
-            .map(m => JSON.parse(m))
-            .filter(l => l.length)
-            .join('\n');
-
-        console.log(message);
-
-        const marker = L.marker([e.z, e.x], {
-            title: message,
-            icon: L.divIcon({
-                className: `poi poi--type-${type}`,
-                size: [32, 32],
-                iconAnchor: [16, 32],
-                tooltipAnchor: [16, 0],
-            }),
-        });
-
+        marker.__MC_ENTITY_ID__ = entity.id;
         marker.addTo(map);
-
         poi.push(marker);
     });
 };
 
-map.on('moveend', function(e) {
-    clearPoi();
+const refreshPoi = function(e) {
     getPoi(map.getBounds())
+        .then(clearPoi)
         .then(addPoi);
-});
+};
+
+map.on('moveend', refreshPoi);
+
+refreshPoi();
+
+// Marker factories + utilities
+
+const createSymbolMarker = function (entity, title) {
+    const marker = L.marker([-entity.z, entity.x], {
+        title,
+        icon: createSymbolIcon(cleanEntityId(entity.entity_type)),
+    });
+
+    marker.bindPopup(`${title}<br>${entity.x}, ${entity.z}`);
+
+    return marker;
+};
+
+const createSignMarker = function(entity) {
+    const lines = entity.metadata.front_text.messages
+        .map(m => JSON.parse(m))
+        .filter(l => l.length);
+
+    const marker = L.marker([-entity.z, entity.x], {
+        title: lines.join(' / '),
+        icon: createSymbolIcon('sign'),
+    });
+
+    marker.bindPopup(lines.join('<br>'));
+
+    return marker;
+};
+
+const createSymbolIcon = function(sym) {
+    return L.divIcon({
+        className: `poi poi--entity-${sym}`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32],
+    });
+};
+
+const cleanEntityId = function(id) {
+    return id.replace('minecraft:', '');
+};
