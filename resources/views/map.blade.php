@@ -15,8 +15,7 @@
     <body>
         <div
             id="map"
-            data-x="{{ $x }}"
-            data-y="{{ $y }}"
-            data-zoom="{{ $zoom }}"></div>
+            data-spawn-x="{{ $spawnX }}"
+            data-spawn-z="{{ $spawnZ }}"></div>
     </body>
 </html>

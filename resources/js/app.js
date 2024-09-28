@@ -1,8 +1,15 @@
 const $container = document.getElementById('map');
+
+// Base Map
+
+const spawn = L.latLng(
+    $container.dataset.spawnZ,
+    $container.dataset.spawnX
+);
 const map = L.map($container, {
     crs: L.CRS.Simple,
 })
-    .setView([0, 0], 2);
+    .setView(spawn, 2);
 
 L.tileLayer('/api/tiles/{z}/{x}/{y}', {
     minZoom: 0,
@@ -14,8 +21,7 @@ L.tileLayer('/api/tiles/{z}/{x}/{y}', {
     tileSize: 512,
 }).addTo(map);
 
-// Add a home marker:
-L.marker([0, 0]).addTo(map);
+L.marker(spawn).addTo(map);
 
 // Set up our coordinate output:
 L.Control.WorldCoordinates = L.Control.extend({
