@@ -36,6 +36,7 @@ class Metadata extends Controller
             $player['name'] = Data::getPlayerNameByUuid($uuid);
             $player['position'] = $data->getList('Pos');
             $player['dimension'] = $data->getString('Dimension');
+            $player['lastActivity'] = $fs->lastModified($file);
 
             $death = $data->getCompound('LastDeathLocation');
 
