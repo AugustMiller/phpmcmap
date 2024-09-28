@@ -102,12 +102,19 @@ fetch('/api/players')
             // The Minecraft Z coordinate (Y) is inverted from Leaflet!
             const [x, y, z] = player.position;
 
-            L.marker([-z, x], {
-                icon: L.divIcon({
-                    className: 'player',
-                    html: player.name,
+            const marker = L.marker([-z, x], {
+                icon: L.icon({
+                    iconUrl: `https://mc-heads.net/avatar/${player.uuid}`,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16],
+                    popupAnchor: [0, -16],
+                    className: 'avatar',
                 }),
-            }).addTo(map);
+            });
+
+            marker.bindPopup(player.name)
+
+            marker.addTo(map);
         }
     });
 
