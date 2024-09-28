@@ -25,9 +25,9 @@ map.addLayer(worldTileLayer);
 
 // Layers
 
-const spawnLayer = L.layerGroup().setZIndex(2);
-const playersLayer = L.layerGroup().setZIndex(1);
-const poiLayer = L.layerGroup().setZIndex(0);
+const spawnLayer = L.layerGroup();
+const playersLayer = L.layerGroup();
+const poiLayer = L.layerGroup();
 
 const overlays = {
     'Spawn': spawnLayer,
