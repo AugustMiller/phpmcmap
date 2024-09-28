@@ -11,7 +11,7 @@ const map = L.map($container, {
 })
     .setView(spawn, 2);
 
-L.tileLayer('/api/tiles/{z}/{x}/{y}', {
+const worldTileLayer = L.tileLayer('/api/tiles/{z}/{x}/{y}', {
     minZoom: 0,
     maxZoom: 5,
     noWrap: true,
@@ -19,11 +19,41 @@ L.tileLayer('/api/tiles/{z}/{x}/{y}', {
     updateInterval: 200,
     keepBuffer: 4,
     tileSize: 512,
-}).addTo(map);
+});
+
+map.addLayer(worldTileLayer);
+
+// Layers
+
+const spawnLayer = L.layerGroup().setZIndex(2);
+const playersLayer = L.layerGroup().setZIndex(1);
+const poiLayer = L.layerGroup().setZIndex(0);
+
+const overlays = {
+    'Spawn': spawnLayer,
+    'Players': playersLayer,
+    'Landmarks': poiLayer,
+};
+
+map.addLayer(spawnLayer);
+map.addLayer(playersLayer);
+// map.addLayer(poiLayer);
+
+// Layer Controls
+
+const layerControls = L.control.layers({
+    "World Elevation": worldTileLayer,
+}, overlays, {
+    collapsed: false,
+});
+
+layerControls.addTo(map);
 
 // Home Marker
 
-L.marker(spawn).addTo(map);
+spawnLayer.addLayer(L.marker(spawn, {
+    title: 'World spawn',
+}));
 
 // Coordinate Widget
 
@@ -114,30 +144,35 @@ fetch('/api/players')
 
             marker.bindPopup(player.name)
 
-            marker.addTo(map);
+            playersLayer.addLayer(marker);
         }
     });
 
 // Points of Interest
 
-const poi = [];
-
 const clearPoi = function(entities) {
     const newIds = entities.map(p => p.id);
-    const existingIds = poi.map(p => p.__MC_ENTITY_ID__);
+    const existingIds = poiLayer.getLayers().map(p => p.__MC_ENTITY_ID__);
 
     // Remove anything that is no longer in view:
-    let i = poi.length;
+    poiLayer.eachLayer(function(p) {
+        if (!newIds.includes(p.__MC_ENTITY_ID__)) {
+            poiLayer.removeLayer(p);
+        }
+    });
+
+    /*
+    let i = poiLayer.length;
+
     while (i--) {
         const p = poi[i];
 
-        if (!p.__MC_ENTITY_ID__ in newIds) {
+        if (!newIds.includes(p.__MC_ENTITY_ID__)) {
             p.remove();
-            poi.splice(poi[i], 1);
-
-            continue;
+            poi.splice(i, 1);
         }
     }
+    */
 
     // Filter out any entities already on the map:
     return entities.filter(function(e) {
@@ -172,13 +207,14 @@ const addPoi = function(entities) {
             marker = createSymbolMarker(entity, `Mob spawner (${cleanEntityId(entity.metadata.SpawnData.entity.id)})`);
         }
 
+        // Fallback marker:
         if (!marker) {
-            return;
+            marker = createSymbolMarker(entity);
         }
 
         marker.__MC_ENTITY_ID__ = entity.id;
-        marker.addTo(map);
-        poi.push(marker);
+
+        poiLayer.addLayer(marker);
     });
 };
 
@@ -188,15 +224,27 @@ const refreshPoi = function(e) {
         .then(addPoi);
 };
 
-map.on('moveend', refreshPoi);
+map.on('moveend', function(e) {
+    if (!map.hasLayer(poiLayer)) {
+        return;
+    }
 
-refreshPoi();
+    refreshPoi();
+});
+
+poiLayer.on('add', refreshPoi);
+
+map.fire('moveend');
 
 // Marker factories + utilities
 
 const createSymbolMarker = function (entity, title) {
+    if (!title) {
+        title = cleanEntityId(entity.entity_type);
+    }
+
     const marker = L.marker([-entity.z, entity.x], {
-        title,
+        title: title,
         icon: createSymbolIcon(cleanEntityId(entity.entity_type)),
     });
 
