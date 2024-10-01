@@ -1,3 +1,5 @@
+@import 'entity-map';
+
 body {
     margin: 0;
     padding: 0;
@@ -24,16 +26,10 @@ body {
     content: '✖️';
 }
 
-.poi--entity-sign::after {
-    content: '🪧';
-}
-
-.poi--entity-beehive::after {
-    content: '🐝';
-}
-
-.poi--entity-mob_spawner::after {
-    content: '⛓️‍💥';
+@each $entity, $symbol in $entityMap {
+    .poi--entity-#{$entity}::after {
+        content: $symbol;
+    }
 }
 
 .leaflet-popup-content {
