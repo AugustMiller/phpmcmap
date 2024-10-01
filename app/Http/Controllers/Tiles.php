@@ -99,10 +99,10 @@ class Tiles extends Controller
                         Math::scale($clamped, 0, 16, 200, 0),
                     );
                 } else {
-                    $value = Math::scale($avgSurfaceHeight, 0, 255, 100, 240);
+                    $value = Math::scale($avgSurfaceHeight, 0, 255, 0, 200);
 
                     $rect['color'] = new Color(
-                        min(255, $value + 30),
+                        max(0, $value - 20),
                         min(255, $value + 30),
                         $value,
                     );
@@ -143,9 +143,9 @@ class Tiles extends Controller
 
                 // Everything else should be treated as land:
                 if ($surfaceHeight === $oceanHeight) {
-                    $value = Math::scale($block->y, 0, 255, 100, 240);
+                    $value = Math::scale($block->y, 0, 255, 0, 200);
 
-                    $color->r = min(255, $value + 30);
+                    $color->r = max(0, $value - 20);
                     $color->g = min(255, $value + 30);
                     $color->b = $value;
                 }
