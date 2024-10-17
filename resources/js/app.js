@@ -1,18 +1,26 @@
 import WorldCoordinates from './leaflet/world-coordinates';
 import { refreshPoi } from './api/poi'
+import { createHash, parseHash } from './leaflet/hash';
 
 const $container = document.getElementById('map');
 
 // Base Map
 
+const hashLoc = parseHash(window.location.hash);
+
 const spawn = L.latLng(
     $container.dataset.spawnZ,
     $container.dataset.spawnX
 );
+
+const initialPosition = hashLoc ? [hashLoc.lat, hashLoc.lng] : spawn;
+
+const initialZoom = hashLoc ? hashLoc.zoom: 1;
+
 const map = L.map($container, {
     crs: L.CRS.Simple,
 })
-    .setView(spawn, 2);
+    .setView(initialPosition, initialZoom);
 
 const worldTileLayer = L.tileLayer('/api/tiles/{z}/{x}/{y}', {
     minZoom: 0,
@@ -22,6 +30,10 @@ const worldTileLayer = L.tileLayer('/api/tiles/{z}/{x}/{y}', {
     updateInterval: 200,
     keepBuffer: 4,
     tileSize: 512,
+});
+
+map.on('moveend', function(e) {
+    window.location.hash = createHash(map);
 });
 
 map.addLayer(worldTileLayer);
