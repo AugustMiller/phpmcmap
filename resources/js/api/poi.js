@@ -40,9 +40,13 @@ export function addPoi(entities, layer) {
         let marker = null;
 
         try {
+            if (!entityMap[type]) {
+                throw new Error('No renderer defined.')
+            }
+
             marker = entityMap[type](entity);
         } catch (e) {
-            console.error(`Skipping unsupported entity: ${type}`);
+            console.warn(`Skipping [${type}] entity: ${e.message}`);
 
             return;
         }
