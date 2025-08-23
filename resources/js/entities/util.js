@@ -9,7 +9,7 @@ export function createSymbolMarker(entity, title) {
         icon: createSymbolIcon(cleanEntityId(entity.entity_type)),
     });
 
-    marker.bindPopup(`${title}<br>${entity.x}, ${entity.z}`);
+    marker.bindPopup(`${title}<br>${entity.x}, ${entity.z} (Elevation: ${entity.y})`);
 
     return marker;
 };
