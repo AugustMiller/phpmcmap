@@ -19,7 +19,7 @@ class DbPoi extends Model
     /**
      * @inheritdoc
      */
-    public $fillable = ['x', 'z', 'entity_type', 'label', 'metadata'];
+    public $fillable = ['x', 'z', 'y', 'entity_type', 'label', 'metadata'];
 
     /**
      * @inheritdoc

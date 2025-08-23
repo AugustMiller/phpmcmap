@@ -102,6 +102,7 @@ class DbChunk extends Model
             $entities[] = [
                 'x' => $entity->getInt('x')->getValue(),
                 'z' => $entity->getInt('z')->getValue(),
+                'y' => $entity->getInt('y')->getValue(),
                 'entity_type' => $entity->getString('id')->getValue(),
                 'metadata' => $entity,
             ];
