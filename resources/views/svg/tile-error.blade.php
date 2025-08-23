@@ -8,7 +8,6 @@
         .border {
             fill: none;
             stroke: rgb(65, 65, 65);
-            stroke-dasharray: 5px;
             stroke-width: 1px;
         }
 
@@ -51,7 +50,7 @@
     <text
         x="15"
         y="25"
-        class="error">Error!</text>
+        class="error">Uh oh!</text>
 
     <text
         x="15"
