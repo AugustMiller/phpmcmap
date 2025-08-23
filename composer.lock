@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e4c265f85f1a6d6fceddd9cde3761cb6",
+    "content-hash": "f16e83409362cf0bf3dcd7e05b24ca59",
     "packages": [
         {
             "name": "aternos/nbt",
@@ -5756,6 +5756,56 @@
                 "source": "https://github.com/webmozarts/assert/tree/1.11.0"
             },
             "time": "2022-06-03T18:03:27+00:00"
+        },
+        {
+            "name": "xpaw/php-source-query-class",
+            "version": "4.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/xPaw/PHP-Source-Query.git",
+                "reference": "02839815b3281c45b111c8dfdb37d6004d886fe9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/xPaw/PHP-Source-Query/zipball/02839815b3281c45b111c8dfdb37d6004d886fe9",
+                "reference": "02839815b3281c45b111c8dfdb37d6004d886fe9",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.1"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^1.10",
+                "phpunit/phpunit": "^10.3",
+                "vimeo/psalm": "^5.15"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "xPaw\\SourceQuery\\": "SourceQuery/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "LGPL-2.1"
+            ],
+            "description": "PHP library to query and send RCON commands to servers based on \"Source Engine Query\" protocol",
+            "homepage": "https://github.com/xPaw/PHP-Source-Query",
+            "keywords": [
+                "ark",
+                "counter-strike",
+                "csgo",
+                "gmod",
+                "minecraft",
+                "rcon",
+                "rust",
+                "starbound",
+                "team fortress"
+            ],
+            "support": {
+                "source": "https://github.com/xPaw/PHP-Source-Query/tree/4.0.0"
+            },
+            "time": "2024-08-04T08:10:16+00:00"
         }
     ],
     "packages-dev": [
@@ -8273,10 +8323,10 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
-    "platform": [],
-    "platform-dev": [],
+    "platform": {},
+    "platform-dev": {},
     "plugin-api-version": "2.6.0"
 }
