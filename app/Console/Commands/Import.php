@@ -36,21 +36,9 @@ class Import extends Command
         $count = count($files);
         $updated = 0;
 
-        $this->info("Connecting to RCON...");
-
-        $rcon = new SourceQuery;
-        $isRconConnected = false;
-
-        try {
-            $rcon->Connect(env('MC_RCON_SERVER'), env('MC_RCON_PORT'));
-            $rcon->SetRconPassword(env('MC_RCON_PASSWORD'));
-
-            $rcon->Rcon('say Starting backup!');
-
-            $isRconConnected = true;
-        } catch(\Exception $e) {
-            $this->error("Failed to connect to the RCON server: {$e->getMessage()}");
-        }
+        $this->call('app:rcon', [
+            'str' => 'say Starting render!',
+        ]);
 
         $this->info("Found {$count} region files...");
 
@@ -98,10 +86,9 @@ class Import extends Command
 
         $this->info(sprintf('Finished updating %d of %d regions.', $updated, $count));
 
-        if ($isRconConnected) {
-            $rcon->Rcon(sprintf('say Finished rendering %d of %d regions!', $updated, $count));
-            $rcon->Disconnect();
-        }
+        $this->call('app:rcon', [
+            'str' => 'say ' . sprintf('Finished updating %d of %d regions.', $updated, $count),
+        ]);
 
         return 0;
     }

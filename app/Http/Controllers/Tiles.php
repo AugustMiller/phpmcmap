@@ -9,6 +9,7 @@ use App\Models\DbChunk;
 use App\Models\DbRegion;
 use App\Models\Vector;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Tiles Controller
@@ -23,6 +24,14 @@ class Tiles extends Controller
 
     public function render(int $zoom, int $x, int $z)
     {
+        $cacheKey = sprintf('tile:%s:%s:%s', $zoom, $x, $z);
+
+        if (Cache::has($cacheKey)) {
+            return response(Cache::get($cacheKey))
+                ->header('Content-Type', 'image/svg+xml')
+                ->header('X-MC-Cached', $cacheKey);
+        }
+
         $region = Coordinates::tileToRegion($zoom, $x, $z);
         $dbRegion = DbRegion::firstWhere([
             'x' => $region->x,
@@ -38,6 +47,9 @@ class Tiles extends Controller
                 ])
                 ->header('Content-Type', 'image/svg+xml');
         }
+
+        // Let’s see how long this takes:
+        $timeStart = microtime(true);
 
         $edge = Coordinates::chunksPerTile($zoom);
         $tilesPerRegion = Coordinates::tilesPerRegion($zoom);
@@ -163,17 +175,27 @@ class Tiles extends Controller
             }
         }
 
+        $timeCompute = microtime(true) - $timeStart;
 
-        return response()
-            ->view('svg.tile', [
-                'rects' => $rects,
-                'title' => "Map tile {$x}, {$z} at zoom level {$zoom}",
-            ])
+        $svg = view('svg.tile', [
+            'rects' => $rects,
+            'title' => "Map tile {$x}, {$z} at zoom level {$zoom}",
+        ])->render();
+
+        $timeRender = microtime(true) - $timeStart;
+
+        // Tag the cache entry by the region so we can clear it, later:
+        $tag = sprintf('region.%s.%s', $region->x, $region->y);
+
+        $cached = Cache::tags([$tag])->put($cacheKey, $svg, 100);
+
+        return response($svg)
             ->header('Content-Type', 'image/svg+xml')
             // Send some metadata with each response:
             ->header('X-MC-Region', "{$region->x}, {$region->z}")
             ->header('X-MC-Chunks', "{$edge}x{$edge} from [{$offsetInRegion->x}, {$offsetInRegion->z}]")
             ->header('X-MC-Data', $chunks->count())
-            ->header('X-MC-Last-Modified', $lastModified);
+            ->header('X-MC-Last-Modified', $lastModified)
+            ->header('X-MC-Timing', sprintf('Compute: %f / Render: %f', $timeCompute, $timeRender));
     }
 }
