@@ -36,3 +36,20 @@ body {
     text-align: center;
     font-family: monospace;
 }
+
+
+.pan-arrow {
+    appearance: none;
+    border: none;
+    background-color: hsl(0, 0, 90);
+    cursor: pointer;
+    display: block;
+    float: left;
+    margin: 2px;
+    width: 30px;
+    height: 30px;
+
+    &:hover {
+        background-color: hsl(0, 0, 80);
+    }
+}

@@ -1,4 +1,5 @@
 import WorldCoordinates from './leaflet/world-coordinates';
+import Pan from './leaflet/pan';
 import { refreshPoi } from './api/poi'
 import { createHash, parseHash } from './leaflet/hash';
 
@@ -70,9 +71,10 @@ spawnLayer.addLayer(L.marker(spawn, {
     title: 'World spawn',
 }));
 
-// Coordinate Widget
+// Widgets
 
 (new WorldCoordinates({ position: 'bottomleft' })).addTo(map);
+// (new Pan({ position: 'topleft' })).addTo(map);
 
 // Player Positions
 
