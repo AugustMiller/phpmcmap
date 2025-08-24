@@ -24,14 +24,6 @@ class Tiles extends Controller
 
     public function render(int $zoom, int $x, int $z)
     {
-        $cacheKey = sprintf('tile:%s:%s:%s', $zoom, $x, $z);
-
-        if (Cache::has($cacheKey)) {
-            return response(Cache::get($cacheKey))
-                ->header('Content-Type', 'image/svg+xml')
-                ->header('X-MC-Cached', $cacheKey);
-        }
-
         $region = Coordinates::tileToRegion($zoom, $x, $z);
         $dbRegion = DbRegion::firstWhere([
             'x' => $region->x,
@@ -46,6 +38,18 @@ class Tiles extends Controller
                     'z' => $z,
                 ])
                 ->header('Content-Type', 'image/svg+xml');
+        }
+
+        // Tag the cache entry by the region so we can clear it, later:
+        $tag = sprintf('region/%s:%s', $region->x, $region->y);
+
+        // Cache by the Leaflet tile coordinates:
+        $cacheKey = sprintf('tile/%s:%s:%s', $zoom, $x, $z);
+
+        if (Cache::tags([$tag])->has($cacheKey)) {
+            return response(Cache::tags([$tag])->get($cacheKey))
+                ->header('Content-Type', 'image/svg+xml')
+                ->header('X-MC-Cached', $cacheKey);
         }
 
         // Let’s see how long this takes:
@@ -184,10 +188,7 @@ class Tiles extends Controller
 
         $timeRender = microtime(true) - $timeStart;
 
-        // Tag the cache entry by the region so we can clear it, later:
-        $tag = sprintf('region.%s.%s', $region->x, $region->y);
-
-        $cached = Cache::tags([$tag])->put($cacheKey, $svg, 100);
+        $cached = Cache::tags([$tag])->put($cacheKey, $svg);
 
         return response($svg)
             ->header('Content-Type', 'image/svg+xml')
@@ -196,6 +197,7 @@ class Tiles extends Controller
             ->header('X-MC-Chunks', "{$edge}x{$edge} from [{$offsetInRegion->x}, {$offsetInRegion->z}]")
             ->header('X-MC-Data', $chunks->count())
             ->header('X-MC-Last-Modified', $lastModified)
-            ->header('X-MC-Timing', sprintf('Compute: %f / Render: %f', $timeCompute, $timeRender));
+            ->header('X-MC-Timing', sprintf('Compute: %f / Render: %f', $timeCompute, $timeRender))
+            ->header('X-MC-Did-Cache', $cached);
     }
 }
