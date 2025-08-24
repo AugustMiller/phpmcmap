@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('CACHE_DRIVER', 'memcached'),
+    'default' => env('CACHE_DRIVER', 'redis'),
 
     /*
     |--------------------------------------------------------------------------
@@ -32,59 +32,17 @@ return [
     */
 
     'stores' => [
-
-        'apc' => [
-            'driver' => 'apc',
-        ],
-
-        'array' => [
-            'driver' => 'array',
-            'serialize' => false,
-        ],
-
-        'database' => [
-            'driver' => 'database',
-            'table' => 'cache',
-            'connection' => null,
-            'lock_connection' => null,
-        ],
-
-        'file' => [
-            'driver' => 'file',
-            'path' => storage_path('framework/cache/data'),
-            'lock_path' => storage_path('framework/cache/data'),
-        ],
-
-        'memcached' => [
-            'driver' => 'memcached',
-            'servers' => [
-                [
-                    'host' => env('MEMCACHED_HOST', '127.0.0.1'),
-                    'port' => env('MEMCACHED_PORT', 11211),
-                    'weight' => 100,
-                ],
-            ],
-        ],
-
         'redis' => [
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            // 'password' => env('REDIS_PASSWORD', null),
+            'port' => env('REDIS_PORT', 6379),
+            // 'username' => env('REDIS_USERNAME', 'redis'),
+            // 'password' => env('REDIS_PASSWORD', 'redis'),
+            'database' => 0,
             'driver' => 'redis',
             'connection' => 'cache',
             'lock_connection' => 'default',
         ],
-
-        'dynamodb' => [
-            'driver' => 'dynamodb',
-            'key' => env('AWS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
-            'table' => env('DYNAMODB_CACHE_TABLE', 'cache'),
-            'endpoint' => env('DYNAMODB_ENDPOINT'),
-        ],
-
-        'octane' => [
-            'driver' => 'octane',
-        ],
-
     ],
 
     /*
