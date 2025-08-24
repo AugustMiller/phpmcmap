@@ -27,6 +27,13 @@ class Import extends Command
     protected $description = 'Imports data from new and updated region files.';
 
     /**
+     * Whether an exit signal has been caught.
+     * 
+     * @var bool
+     */
+    private bool $exit = false;
+
+    /**
      * Execute the console command.
      */
     public function handle(): int
@@ -36,13 +43,22 @@ class Import extends Command
         $count = count($files);
         $updated = 0;
 
+        pcntl_signal(SIGINT, [$this, 'signal']);
+        pcntl_signal(SIGTERM, [$this, 'signal']);
+
         $this->call('app:rcon', [
             'str' => 'say Starting render!',
         ]);
 
         $this->info("Found {$count} region files...");
 
+
         foreach ($files as $file) {
+            // Pause
+            if ($this->exit) {
+                break;
+            }
+
             $vec = Coordinates::fromFilename($file);
             $fileMod = Carbon::createFromTimestamp($fs->lastModified($file));
 
@@ -84,6 +100,16 @@ class Import extends Command
             $this->info("  -> Refreshed in {$duration}s!");
         }
 
+        if ($this->exit) {
+            $this->warn(sprintf('Stopped after synchronizing %d of %d regions.', $updated, $count));
+
+            $this->call('app:rcon', [
+                'str' => 'say ' . sprintf('Stopped after synchronizing %d of %d regions.', $updated, $count),
+            ]);
+
+            return 0;
+        }
+
         $this->info(sprintf('Finished updating %d of %d regions.', $updated, $count));
 
         $this->call('app:rcon', [
@@ -91,5 +117,11 @@ class Import extends Command
         ]);
 
         return 0;
+    }
+
+    public function signal($code)
+    {
+        $this->info('Exiting gracefully...');
+        $this->exit = true;
     }
 }
