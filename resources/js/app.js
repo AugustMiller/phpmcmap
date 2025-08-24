@@ -24,11 +24,13 @@ const map = L.map($container, {
     .setView(initialPosition, initialZoom);
 
 const worldTileLayer = L.tileLayer('/api/tiles/{z}/{x}/{y}', {
-    minZoom: 0,
-    maxZoom: 5,
+    minNativeZoom: 0,
+    minZoom: -2,
+    maxNativeZoom: 5,
+    maxZoom: 7,
     noWrap: true,
     updateWhenZooming: false,
-    updateInterval: 200,
+    updateInterval: 500,
     keepBuffer: 4,
     tileSize: 512,
 });
