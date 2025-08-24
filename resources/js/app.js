@@ -14,7 +14,7 @@ const spawn = L.latLng(
     $container.dataset.spawnX
 );
 
-const initialPosition = hashLoc ? [hashLoc.lat, hashLoc.lng] : spawn;
+const initialPosition = hashLoc ? L.latLng(hashLoc.lat, hashLoc.lng) : spawn;
 
 const initialZoom = hashLoc ? hashLoc.zoom: 1;
 
@@ -72,6 +72,13 @@ layerControls.addTo(map);
 spawnLayer.addLayer(L.marker(spawn, {
     title: 'World spawn',
 }));
+
+// If the initial location is not the spawn, place a second pin, there:
+if (!initialPosition.equals(spawn)) {
+    L.marker(initialPosition, {
+        title: 'Initial location',
+    }).addTo(map);
+}
 
 // Widgets
 
