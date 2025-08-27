@@ -1,3 +1,5 @@
+const CHUNK_WIDTH = 512;
+
 export default L.Control.extend({
     map: null,
 
@@ -27,15 +29,20 @@ export default L.Control.extend({
 
     handlePan: function(dir, e) {
         const dirs = {
-            up: -100,
-            down: 100,
-            left: -100,
-            right: 100,
+            up: L.point(0, -1),
+            down: L.point(0, 1),
+            left: L.point(-1, 0),
+            right: L.point(1, 0),
         };
 
         const center = this.map.getCenter();
+        const regionCenter = L.point(
+            (center.lat - (center.lat % CHUNK_WIDTH)) / Math.pow(2, 8),
+            (center.lng - (center.lng % CHUNK_WIDTH)) / Math.pow(2, 8),
+        );
+        const targetCenter = regionCenter.add(dirs[dir]);
 
-        console.log(dir, e);
+        this.map.panTo(L.latLng(targetCenter.multiplyBy(CHUNK_WIDTH)));
     },
 
     onRemove: function(map) {

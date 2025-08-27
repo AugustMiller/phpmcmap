@@ -83,7 +83,7 @@ if (!initialPosition.equals(spawn)) {
 // Widgets
 
 (new WorldCoordinates({ position: 'bottomleft' })).addTo(map);
-// (new Pan({ position: 'topleft' })).addTo(map);
+(new Pan({ position: 'topleft' })).addTo(map);
 
 // Player Positions
 
