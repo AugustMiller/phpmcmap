@@ -32,7 +32,7 @@ class Rcon extends Command
             $rcon->Connect(env('MC_RCON_SERVER'), env('MC_RCON_PORT'));
             $rcon->SetRconPassword(env('MC_RCON_PASSWORD'));
 
-            $rcon->Rcon($this->argument('str'));
+            $this->info($rcon->Rcon($this->argument('str')));
         } catch(\Exception $e) {
             $this->error("Failed to connect to the RCON server: {$e->getMessage()}");
         } finally {
