@@ -33,9 +33,9 @@ class Tiles extends Controller
         if (!$dbRegion) {
             return response()
                 ->view('svg.tile-error', [
-                    'message' => "No data exists for region [{$x}, {$z}].",
-                    'x' => $x,
-                    'z' => $z,
+                    'message' => "No data exists for region [{$region->x}, {$region->z}].",
+                    'x' => $region->x,
+                    'z' => $region->z,
                 ])
                 ->header('Content-Type', 'image/svg+xml');
         }
