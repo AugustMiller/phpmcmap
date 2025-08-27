@@ -9,7 +9,6 @@ use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
-use xPaw\SourceQuery\SourceQuery;
 
 class Import extends Command
 {
@@ -53,7 +52,7 @@ class Import extends Command
 
         $this->info("Found {$count} region files...");
 
-        foreach ($files as $file) {
+        foreach ($files as $i => $file) {
             // Pause
             if ($this->exit) {
                 break;
@@ -62,6 +61,7 @@ class Import extends Command
             $vec = Coordinates::fromFilename($file);
             $fileMod = Carbon::createFromTimestamp($fs->lastModified($file));
 
+            /** @var DbRegion $dbRegion */
             $dbRegion = DbRegion::firstOrCreate([
                 'x' => $vec->x,
                 'z' => $vec->z,
@@ -70,14 +70,14 @@ class Import extends Command
             $needsUpdate = $this->option('force') || $dbRegion->last_modified === null || $fileMod->gt($dbRegion->last_modified);
 
             if (!$needsUpdate) {
-                $this->info("Region [{$dbRegion->x}, {$dbRegion->z}] has not been modified.");
+                $this->info("Region [{$dbRegion->x}, {$dbRegion->z}] ({$file}, {$i} of {$count}) has not been modified since we last checked.");
 
                 continue;
             }
 
             $updated++;
 
-            $this->comment("Region [{$dbRegion->x}, {$dbRegion->z}] needs an update.");
+            $this->comment("Region [{$dbRegion->x}, {$dbRegion->z}] ({$file}, {$i} of {$count}) needs an update.");
 
             if ($dbRegion->last_modified === null) {
                 $this->line("  -> There is no history in the database.");
