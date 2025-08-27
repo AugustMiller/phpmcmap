@@ -52,11 +52,6 @@ class Coordinates
             $x >> 9, // ?
             $z >> 9, // ?
         );
-
-        return new Region(
-            $x >> 9, // ?
-            $z >> 9, // ?
-        );
     }
 
     /**
