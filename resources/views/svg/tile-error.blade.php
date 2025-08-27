@@ -8,12 +8,12 @@
         .border {
             fill: none;
             stroke: rgb(65, 65, 65);
-            stroke-width: 1px;
+            stroke-width: 2px;
         }
 
         .x {
-            stroke: rgb(100, 100, 100);
-            stroke-width: 1px;
+            stroke: rgb(150, 75, 75);
+            stroke-width: 2px;
         }
 
         .error {
