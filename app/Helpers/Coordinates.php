@@ -20,11 +20,6 @@ class Coordinates
             floor($x / pow(2, $zoom)),
             floor($y / pow(2, $zoom)),
         );
-
-        // return new Region(
-        //     floor($x / pow(2, $zoom)),
-        //     floor($y / pow(2, $zoom)),
-        // );
     }
 
     /**
@@ -57,12 +52,9 @@ class Coordinates
     /**
      * Returns the chunk a block at the given world coordinates belongs to.
      */
-    public static function blockToChunk(int $x, int $z): Chunk
+    public static function blockToChunk(int $x, int $z): Vector
     {
-        $vec = static::blockToRegion($x, $z);
-        $region = new Region($vec->x, $vec->z);
-
-        return $region->getChunk(
+        return new Vector(
             $x >> 4,
             $z >> 4,
         );
