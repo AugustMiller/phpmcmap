@@ -31,7 +31,7 @@ class Color
         return $this;
     }
 
-    public static function colorFromElevation(int $height): array
+    public static function colorFromElevation(int $height): self
     {
         return new static(255, 255, 255);
     }
