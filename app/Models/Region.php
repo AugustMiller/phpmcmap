@@ -56,10 +56,6 @@ class Region
 
     public function getData(): string
     {
-        if (!$this->fileExists()) {
-            throw new RegionDataMissingException($this);
-        }
-
         if ($this->data === null) {
             $this->data = Storage::disk('region')->get($this->fileName());
         }
