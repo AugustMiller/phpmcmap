@@ -105,7 +105,6 @@ class Tiles extends Controller
                     'y' => $chunkZ,
                     'width' => $chunkUnit,
                     'height' => $chunkUnit,
-                    'color' => 'tan',
                 ];
 
                 if ($isWater) {
