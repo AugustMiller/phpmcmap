@@ -69,6 +69,8 @@ class Tiles extends Controller
             $edge,
         )->get();
 
+        $timeLoad = microtime(true) - $timeStart;
+
         // From those, grab the earliest modified time (we'll send this as a header, later):
         $lastModified = $chunks->min('last_modified');
 
@@ -197,7 +199,7 @@ class Tiles extends Controller
             ->header('X-MC-Chunks', "{$edge}x{$edge} from [{$offsetInRegion->x}, {$offsetInRegion->z}]")
             ->header('X-MC-Data', $chunks->count())
             ->header('X-MC-Last-Modified', $lastModified)
-            ->header('X-MC-Timing', sprintf('Compute: %f / Render: %f', $timeCompute, $timeRender))
+            ->header('X-MC-Timing', sprintf('Load: %f / Compute: %f / Render: %f', $timeLoad, $timeCompute, $timeRender))
             ->header('X-MC-Did-Cache', $cached);
     }
 }
