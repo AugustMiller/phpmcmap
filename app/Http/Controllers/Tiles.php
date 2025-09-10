@@ -25,6 +25,7 @@ class Tiles extends Controller
     public function render(int $zoom, int $x, int $z)
     {
         $region = Coordinates::tileToRegion($zoom, $x, $z);
+        /** @var DbRegion $dbRegion */
         $dbRegion = DbRegion::firstWhere([
             'x' => $region->x,
             'z' => $region->z,
