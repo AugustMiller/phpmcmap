@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('CACHE_DRIVER', 'redis'),
+    'default' => env('CACHE_DRIVER', 'none'),
 
     /*
     |--------------------------------------------------------------------------
@@ -32,6 +32,10 @@ return [
     */
 
     'stores' => [
+        'none' => [
+            'driver' => 'null',
+        ],
+
         'redis' => [
             'host' => env('REDIS_HOST', '127.0.0.1'),
             // 'password' => env('REDIS_PASSWORD', null),
