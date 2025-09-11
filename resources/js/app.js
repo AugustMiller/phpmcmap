@@ -27,7 +27,7 @@ const worldTileLayer = L.tileLayer('/api/tiles/{z}/{x}/{y}', {
     minNativeZoom: 0,
     minZoom: -2,
     maxNativeZoom: 5,
-    maxZoom: 7,
+    maxZoom: 5,
     noWrap: true,
     updateWhenZooming: false,
     updateInterval: 500,
