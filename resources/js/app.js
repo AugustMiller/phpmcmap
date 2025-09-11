@@ -32,7 +32,7 @@ const worldTileLayer = L.tileLayer('/api/tiles/{z}/{x}/{y}', {
     updateWhenZooming: false,
     updateInterval: 500,
     keepBuffer: 4,
-    tileSize: 256,
+    tileSize: 512,
 });
 
 map.on('moveend', function(e) {
