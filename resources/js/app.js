@@ -16,7 +16,7 @@ const spawn = L.latLng(
 
 const initialPosition = hashLoc ? L.latLng(hashLoc.lat, hashLoc.lng) : spawn;
 
-const initialZoom = hashLoc ? hashLoc.zoom: 1;
+const initialZoom = hashLoc ? hashLoc.zoom : 1;
 
 const map = L.map($container, {
     crs: L.CRS.Simple,
