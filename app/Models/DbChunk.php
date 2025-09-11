@@ -8,6 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $x
+ * @property int $z
+ * @property int $region_id
+ */
 class DbChunk extends Model
 {
     use HasFactory;

@@ -112,6 +112,7 @@ class Chunk
      */
     public function getData(): ZLibCompressedStringReader|null|false
     {
+        // Have we been here already?
         if ($this->data !== null) {
             return $this->data;
         }
@@ -119,8 +120,9 @@ class Chunk
         $offset = $this->getDataOffset();
         $length = $this->getDataLength();
 
+        // Anything? Track empty chunks as `false`:
         if ($length === 0) {
-            return null;
+            return $this->data = false;
         }
 
         // Get raw data from region blob:

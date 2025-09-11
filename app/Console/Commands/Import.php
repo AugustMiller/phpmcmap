@@ -7,7 +7,6 @@ use App\Models\DbRegion;
 use App\Models\Region;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class Import extends Command
@@ -98,12 +97,6 @@ class Import extends Command
 
             $duration = microtime(true) - $timeStart;
             $this->info("  -> Refreshed in {$duration}s!");
-
-            $tag = sprintf('region/%d:%d', $region->x, $region->z);
-
-            Cache::tags([$tag])->flush();
-
-            $this->info("  -> Purged tile caches tagged `{$tag}`.");
         }
 
         if ($this->exit) {

@@ -49,7 +49,9 @@ class DbRegion extends Model
                 ['x', '<', $x + $dx],
                 ['z', '>=', $z],
                 ['z', '<', $z + $dz],
-            ]);
+            ])
+            ->orderBy('z')
+            ->orderBy('x');
     }
 
     /**
