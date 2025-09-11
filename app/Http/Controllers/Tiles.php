@@ -73,14 +73,6 @@ class Tiles extends Controller
         /** @var int $blockUnit Dimension in pixels of a single block. */
         $blockUnit = 16;
 
-        // echo "Chunks: {$chunks->count()}\n";
-        // echo "Edge: {$edge}\n";
-        // echo "Chunk width: {$chunkWidth}px\n";
-        // echo "Block Unit: {$blockUnit}px\n";
-        // echo "Sample Resolution: {$sampleResolution}\n";
-        // echo "Blocks per chunk: " . Chunk::BLOCK_DIMENSIONS / $sampleResolution . "\n";
-        // die;
-
         foreach ($chunks as $chunk) {
             /** @var DbChunk $chunk */
 
