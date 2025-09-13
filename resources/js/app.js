@@ -16,7 +16,7 @@ const spawn = L.latLng(
 
 const initialPosition = hashLoc ? L.latLng(hashLoc.lat, hashLoc.lng) : spawn;
 
-const initialZoom = hashLoc ? hashLoc.zoom: 1;
+const initialZoom = hashLoc ? hashLoc.zoom : 1;
 
 const map = L.map($container, {
     crs: L.CRS.Simple,
@@ -32,7 +32,7 @@ const worldTileLayer = L.tileLayer('/api/tiles/{z}/{x}/{y}', {
     updateWhenZooming: false,
     updateInterval: 500,
     keepBuffer: 4,
-    tileSize: 256,
+    tileSize: 512,
 });
 
 map.on('moveend', function(e) {
