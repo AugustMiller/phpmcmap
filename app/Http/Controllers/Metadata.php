@@ -28,6 +28,12 @@ class Metadata extends Controller
         foreach ($files as $file) {
             /** @var Aternos\Nbt\Tag\CompoundTag $data */
             $data = Data::parseNbt($fs->get($file));
+
+            if (!$data) {
+                // Possibly corrupted player data?
+                continue;
+            }
+
             $player = [];
 
             $uuid = Data::convertIntArrayToUuid($data->getIntArray('UUID'));
