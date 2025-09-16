@@ -22,7 +22,11 @@ ddev start
 ddev php artisan migrate
 ```
 
-Without data, the app won’t do much!
+Without data, the app won’t do much! Proceed to [importing](#importing) to start ingesting region files.
+
+&rarr; Run `ddev launch` to open your system’s default browser to the map.
+
+If the browser is blank, you may need to run `ddev npm run build` or `ddev npm run dev` to compile or serve the JavaScript and CSS bundles. Laravel will automatically switch between static resources and “hot module reloading” via the Vite adapter. (I have no idea how part works—it came preconfigured with the app skeleton!)
 
 ## Configuration
 
@@ -42,7 +46,7 @@ To begin an import, run…
 ddev php artisan app:import
 ```
 
-World files from the `storage/region/` folder are scanned, and those without rows in the database (or with more recent modification times) are imported. The same diffing optimization is present on a chunk-by-chunk basis, so only chunks that have changed since the last import are unpacked.
+World files from the `storage/region/` folder are scanned, and those without rows in the database (or with more recent modification times) are imported. The same diffing optimization is present on a chunk-by-chunk basis (using timestamps in the region headers), so only chunks that the game indicates having changed since the last import are unpacked.
 
 The app saves [block entity](https://minecraft.wiki/w/Block_entity) data to the `poi` table, and chunk-by-chunk heightmaps in the `chunks` table.
 
