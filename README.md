@@ -77,7 +77,7 @@ ddev php artisan app:import
 # ... the app will also report some messages to players via RCON!
 ```
 
-> [!DANGER]  
+> [!CAUTION]  
 > This script temporarily pauses world saves via RCON, then flushes changes to disk _before attempting to copy world files_! This helps avoid corruption in the NBT data. If the script fails before saves are turned back on, you may need to reenable saves manually—either via RCON, or by logging in to the server as an `op` and running `/save-on`.
 
 ## RCON
