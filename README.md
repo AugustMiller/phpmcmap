@@ -1,8 +1,8 @@
-# Laravel Minecraft Mapper
+<img src="docs/tile-sample.svg" alt="Sample SVG tile rendered by the application." width="128" height="128">
 
-<div align="center">
-    <img src="docs/tile-sample.svg" alt="Sample SVG tile rendered by the application.">
-</div>
+<br>
+
+# Laravel Minecraft Mapper
 
 This is a barebones [Laravel](https://laravel.com/) application with two primary components:
 
