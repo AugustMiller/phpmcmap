@@ -112,7 +112,8 @@ fetch('/api/players')
                 }),
             });
 
-            marker.bindPopup(`${player.name}<br>${Math.round(x)}, ${Math.round(-z)} (Elevation: ${Math.round(y)})`);
+            // Note that we’re *not* inverting `z` when generating the label, because the coordinates are “natural” to the viewer/player:
+            marker.bindPopup(`${player.name}<br>${Math.round(x)}, ${Math.round(z)} (Elevation: ${Math.round(y)})`);
 
             playersLayer.addLayer(marker);
         }
