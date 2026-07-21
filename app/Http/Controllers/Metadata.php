@@ -7,6 +7,7 @@ use App\Models\DbPoi;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
+use xPaw\SourceQuery\SourceQuery;
 
 class Metadata extends Controller
 {
@@ -72,5 +73,24 @@ class Metadata extends Controller
         }
 
         return response()->json($poiQuery->get());
+    }
+
+    public function activity(Request $request)
+    {
+        $rcon = new SourceQuery;
+
+        try {
+            $rcon->Connect(config('minecraft.rcon.server'), config('minecraft.rcon.port'));
+            $rcon->SetRconPassword(config('minecraft.rcon.password'));
+
+            return response()->json([
+                'statusMessage' => $rcon->Rcon('list'),
+                'time' => $rcon->Rcon('time query time'),
+            ]);
+        } catch(\Exception $e) {
+            abort(400, "Failed to connect to the RCON server: {$e->getMessage()}");
+        } finally {
+            $rcon->Disconnect();
+        }
     }
 }
