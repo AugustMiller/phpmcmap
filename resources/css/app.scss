@@ -41,7 +41,7 @@ body {
 .pan-arrow {
     appearance: none;
     border: none;
-    background-color: hsl(0, 0, 90);
+    background-color: hsl(0, 0%, 90%);
     cursor: pointer;
     display: block;
     float: left;
@@ -50,6 +50,6 @@ body {
     height: 30px;
 
     &:hover {
-        background-color: hsl(0, 0, 80);
+        background-color: hsl(0, 0%, 80%);
     }
 }
