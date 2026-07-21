@@ -29,8 +29,8 @@ class Rcon extends Command
         $rcon = new SourceQuery;
 
         try {
-            $rcon->Connect(env('MC_RCON_SERVER'), env('MC_RCON_PORT'));
-            $rcon->SetRconPassword(env('MC_RCON_PASSWORD'));
+            $rcon->Connect(config('minecraft.rcon.server'), config('minecraft.rcon.port'));
+            $rcon->SetRconPassword(config('minecraft.rcon.password'));
 
             $this->info($rcon->Rcon($this->argument('str')));
         } catch(\Exception $e) {
